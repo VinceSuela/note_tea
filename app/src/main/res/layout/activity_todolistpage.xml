@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#E0C8C8"
+    tools:context=".todolistpage">
+
+    <RelativeLayout
+        android:id="@+id/header"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/rectangle6"
+        android:layout_marginHorizontal="10dp"
+        android:layout_marginTop="30dp"
+        android:layout_centerHorizontal="true"
+        >
+
+        <ImageView
+            android:id="@+id/exit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="20dp"
+            android:layout_centerVertical="true"
+            app:srcCompat="@drawable/back"
+            app:tint="#4D3131" />
+
+        <TextView
+            android:id="@+id/title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_marginLeft="20dp"
+            android:layout_toEndOf="@+id/exit"
+            android:textSize="30dp"
+            android:text="To-Do"
+            android:textStyle="bold"
+            />
+
+        <ImageView
+            android:id="@+id/imageView11"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:layout_marginRight="20dp"
+            app:tint="#4D3131"
+            app:srcCompat="@drawable/checklist" />
+
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:id="@+id/searchnote"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/header"
+    >
+
+        <EditText
+        android:id="@+id/search"
+        android:layout_width="wrap_content"
+        android:layout_height="50dp"
+        android:layout_marginTop="15dp"
+        android:paddingLeft="15dp"
+        android:layout_marginHorizontal="20dp"
+        android:ems="10"
+        android:inputType="text"
+        android:text="Search notes..."
+        android:textColor="#9F8F8F"
+        android:background="@drawable/rectangle"
+        />
+
+        <ImageView
+        android:id="@+id/searchbutton"
+        android:layout_width="55dp"
+        android:layout_height="38dp"
+        android:layout_alignRight="@+id/search"
+        android:layout_marginTop="21dp"
+        android:layout_marginRight="4dp"
+        app:srcCompat="@drawable/search" />
+
+    </RelativeLayout>
+
+    <TextView
+        android:id="@+id/textView3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/searchnote"
+        android:layout_marginTop="25dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginBottom="10dp"
+        android:text="Not completed" />
+
+    <RelativeLayout
+        android:id="@+id/notcompletelayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/textView3">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/notcomplete"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_above="@+id/textView4"
+            />
+
+        <TextView
+            android:id="@+id/textView4"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_marginLeft="20dp"
+            android:layout_marginBottom="10dp"
+            android:text="Not completed" />
+
+
+
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:id="@+id/completelayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/footer"
+        android:layout_below="@id/notcompletelayout">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/complete"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            />
+
+    </RelativeLayout>
+
+
+    <LinearLayout
+        android:id="@+id/footer"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_alignParentBottom="true"
+        android:background="#B6A0A0"
+        android:orientation="horizontal"
+        >
+
+        <ImageButton
+            android:id="@+id/imageButton2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:srcCompat="@drawable/completedtodo" />
+        
+    </LinearLayout>
+
+
+</RelativeLayout>
