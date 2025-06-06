@@ -35,6 +35,7 @@
             android:textStyle="bold"
             android:layout_marginTop="18dp"
             android:layout_toEndOf="@+id/circle"
+            android:textColor="#594444"
             android:textSize="18dp"
             android:layout_marginLeft="7dp"
             />
@@ -72,7 +73,7 @@
             android:inputType="text"
             android:text="Search notes..."
             android:textColor="#9F8F8F"
-            android:background="@drawable/rectangle"
+            android:background="@drawable/rectangle10"
             />
 
         <ImageView
@@ -108,6 +109,7 @@
         android:paddingLeft="20dp"
         android:layout_below="@+id/searchnote"
         android:textSize="23dp"
+        android:textColor="#594444"
         android:text="Your Notes"
         android:textStyle="bold"
         />
@@ -131,13 +133,171 @@
         android:layout_above="@+id/footer"
         android:layout_below="@id/tv5">
 
+
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/notelist"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
+        <LinearLayout
+            android:id="@+id/audio"
+            android:layout_width="94dp"
+            android:layout_height="45dp"
+            android:layout_marginEnd="10dp"
+            android:layout_marginBottom="5dp"
+            android:layout_above="@+id/image"
+            android:background="@drawable/rectangle"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:visibility="invisible"
+            android:layout_alignEnd="@+id/notelist">
+
+
+            <TextView
+                android:id="@+id/textView6"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="20dp"
+                android:textColor="@color/white"
+                android:text="Audio"
+                />
+
+
+            <ImageView
+                android:id="@+id/imageView23"
+                android:layout_width="25dp"
+                android:layout_height="25dp"
+                android:layout_marginTop="3dp"
+                app:srcCompat="@drawable/mic" />
+
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/image"
+            android:layout_width="99dp"
+            android:layout_height="45dp"
+            android:layout_marginEnd="10dp"
+            android:layout_marginBottom="5dp"
+            android:layout_above="@+id/drawing"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:visibility="invisible"
+            android:background="@drawable/rectangle"
+            android:layout_alignEnd="@+id/notelist">
+
+            <TextView
+                android:id="@+id/textView7"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="20dp"
+                android:textColor="@color/white"
+                android:text="Image" />
+
+            <ImageView
+                android:id="@+id/imageView25"
+                android:layout_width="25dp"
+                android:layout_height="25dp"
+                android:layout_marginTop="3.5dp"
+                app:srcCompat="@drawable/img2" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/drawing"
+            android:layout_width="113dp"
+            android:layout_height="45dp"
+            android:layout_marginEnd="10dp"
+            android:layout_marginBottom="5dp"
+            android:layout_above="@+id/list"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:visibility="invisible"
+            android:background="@drawable/rectangle"
+            android:layout_alignEnd="@+id/notelist">
+
+            <TextView
+                android:id="@+id/textView8"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="20dp"
+                android:textColor="@color/white"
+                android:text="Drawing" />
+
+            <ImageView
+                android:id="@+id/imageView26"
+                android:layout_width="21dp"
+                android:layout_height="21dp"
+                android:layout_marginTop="1dp"
+                app:srcCompat="@drawable/pencil2" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/list"
+            android:layout_width="74dp"
+            android:layout_height="45dp"
+            android:layout_marginEnd="10dp"
+            android:layout_marginBottom="5dp"
+            android:layout_above="@+id/text"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:visibility="invisible"
+            android:background="@drawable/rectangle"
+            android:layout_alignEnd="@+id/notelist">
+
+            <TextView
+                android:id="@+id/textView9"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="20dp"
+                android:textColor="@color/white"
+                android:text="List" />
+
+            <ImageView
+                android:id="@+id/imageView27"
+                android:layout_width="25dp"
+                android:layout_height="25dp"
+                android:layout_marginTop="3.5dp"
+                app:srcCompat="@drawable/todo" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/text"
+            android:layout_width="83dp"
+            android:layout_height="45dp"
+            android:layout_marginEnd="10dp"
+            android:layout_marginBottom="7dp"
+            android:layout_above="@+id/circleplus"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:visibility="invisible"
+            android:background="@drawable/rectangle"
+            android:layout_alignEnd="@+id/notelist"
+            >
+
+            <TextView
+                android:id="@+id/textView10"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="20dp"
+                android:textColor="@color/white"
+                android:text="Text" />
+
+            <ImageView
+                android:id="@+id/imageView28"
+                android:layout_width="25dp"
+                android:layout_height="25dp"
+                android:layout_marginTop="2.5dp"
+                app:srcCompat="@drawable/message" />
+
+        </LinearLayout>
+
+
+
         <ImageView
-            android:id="@+id/imageView"
+            android:id="@+id/circleplus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             app:srcCompat="@drawable/addcircle"
@@ -157,6 +317,7 @@
         android:layout_width="match_parent"
         android:layout_height="60dp"
         android:layout_alignParentBottom="true"
+        android:gravity="center"
         android:background="#B6A0A0"
         android:orientation="horizontal"
         >
@@ -165,8 +326,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginLeft="60dp"
             android:layout_marginTop="11dp"
+            android:layout_marginBottom="11dp"
             >
 
             <ImageView
@@ -188,13 +349,17 @@
         </RelativeLayout>
 
 
+        <Space
+            android:layout_width="40dp"
+            android:layout_height="wrap_content"
+            />
 
         <RelativeLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginLeft="70dp"
             android:layout_marginTop="12dp"
+            android:layout_marginBottom="10dp"
             >
 
 
@@ -216,12 +381,17 @@
 
         </RelativeLayout>
 
+        <Space
+            android:layout_width="40dp"
+            android:layout_height="wrap_content"
+            />
+
         <RelativeLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginLeft="60dp"
             android:layout_marginTop="11dp"
+            android:layout_marginBottom="9dp"
             >
 
 

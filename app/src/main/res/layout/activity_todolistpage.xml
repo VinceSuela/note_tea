@@ -96,7 +96,7 @@
     <RelativeLayout
         android:id="@+id/notcompletelayout"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="300dp"
         android:layout_below="@id/textView3">
 
         <androidx.recyclerview.widget.RecyclerView
@@ -144,12 +144,56 @@
         android:orientation="horizontal"
         >
 
-        <ImageButton
-            android:id="@+id/imageButton2"
+        <RelativeLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            app:srcCompat="@drawable/completedtodo" />
-        
+            android:layout_marginLeft="80dp"
+            >
+
+            <ImageView
+                android:id="@+id/imageView12"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerHorizontal="true"
+                android:paddingTop="3dp"
+                app:srcCompat="@drawable/comment"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/imageView12"
+                android:layout_marginTop="-3dp"
+                android:text="Comment"
+                />
+
+        </RelativeLayout>
+
+
+        <RelativeLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="120dp"
+            >
+
+            <ImageView
+                android:id="@+id/imageView10"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerHorizontal="true"
+                android:paddingTop="5dp"
+                app:srcCompat="@drawable/completedtodo" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/imageView10"
+                android:layout_marginTop="-5dp"
+                android:text="Add to-do"
+                />
+
+        </RelativeLayout>
+
+
     </LinearLayout>
 
 

@@ -16,6 +16,7 @@
       android:paddingTop="20dp"
       android:paddingLeft="15dp"
       android:background="#B6A0A0"
+      android:textColor="#594444"
       android:text="Sign Up"
       android:textSize="25dp"
       android:textStyle="bold" />
@@ -28,6 +29,7 @@
       android:paddingLeft="10dp"
       android:layout_below="@+id/tv1"
       android:text="Email"
+      android:textColor="#594444"
       android:textStyle="bold"
       />
 
@@ -40,10 +42,11 @@
       android:layout_marginHorizontal="20dp"
       android:layout_below="@+id/tv2"
       android:ems="10"
+      android:textColor="#4D3131"
       android:inputType="text"
-      android:text="Enter your Email"
-      android:textColor="#9F8F8F"
-      android:background="@drawable/rectangle"
+      android:hint="Enter Email"
+      android:textColorHint="#9F8F8F"
+      android:background="@drawable/rectangle10"
       />
 
   <TextView
@@ -65,8 +68,10 @@
       android:layout_height="wrap_content"
       android:layout_marginTop="10dp"
       android:paddingLeft="10dp"
+
       android:layout_below="@+id/tv3"
       android:text="Create Password"
+      android:textColor="#594444"
       android:textStyle="bold"
       />
 
@@ -78,12 +83,13 @@
       android:layout_below="@+id/tv4"
       android:layout_marginHorizontal="20dp"
       android:layout_marginTop="10dp"
-      android:background="@drawable/rectangle"
+      android:background="@drawable/rectangle10"
       android:ems="10"
+      android:textColor="#4D3131"
       android:inputType="text"
       android:paddingLeft="15dp"
-      android:text="Enter Password"
-      android:textColor="#9F8F8F" />
+      android:hint="Enter Password"
+      android:textColorHint="#9F8F8F" />
 
   <TextView
       android:id="@+id/tv5"
@@ -111,6 +117,7 @@
 
   <TextView
       android:id="@+id/tv6"
+      android:clickable="true"
       android:layout_width="wrap_content"
       android:layout_height="wrap_content"
       android:layout_marginTop="5dp"
@@ -122,19 +129,19 @@
       />
 
   <LinearLayout
-      android:id="@+id/buttons"
+      android:id="@+id/footer"
       android:layout_width="match_parent"
       android:layout_height="75dp"
       android:layout_alignParentBottom="true"
+      android:gravity="center"
       android:background="#B6A0A0"
-      android:orientation="horizontal" >
+      android:orientation="horizontal"
+      >
 
     <RelativeLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginLeft="30dp"
-        android:layout_marginTop="11dp"
         >
 
       <TextView
@@ -158,13 +165,16 @@
     </RelativeLayout>
 
 
+    <Space
+        android:layout_width="25dp"
+        android:layout_height="wrap_content"
+        />
 
     <RelativeLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginLeft="30dp"
-        android:layout_marginTop="11dp"
+
         >
 
       <TextView
@@ -191,6 +201,7 @@
 
 
   </LinearLayout>
+
 
 
 </RelativeLayout>
