@@ -1,12 +1,14 @@
 package com.example.myapplication;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
@@ -22,6 +24,7 @@ public class loginpage extends AppCompatActivity {
     Button login;
     ImageView newuser;
     TextView tv_email, tv_password;
+    RelativeLayout about, contact;
     FirebaseAuth mAuth;
 
 
@@ -30,6 +33,8 @@ public class loginpage extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        about = findViewById(R.id.about);
+        contact = findViewById(R.id.contact);
         et_email = findViewById(R.id.email);
         et_password = findViewById(R.id.password);
         newuser = findViewById(R.id.newuser);
@@ -37,6 +42,26 @@ public class loginpage extends AppCompatActivity {
         tv_email = findViewById(R.id.tv3);
         tv_password = findViewById(R.id.tv5);
         mAuth = FirebaseAuth.getInstance();
+        String url = "https://paffle.my.canva.site/notetea";
+
+        about.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(Intent.ACTION_VIEW);
+                intent.setData(Uri.parse(url));
+                startActivity(intent);
+            }
+        });
+
+        contact.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(Intent.ACTION_VIEW);
+                intent.setData(Uri.parse(url));
+                startActivity(intent);
+            }
+        });
+
 
         newuser.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -57,12 +82,10 @@ public class loginpage extends AppCompatActivity {
                 if (TextUtils.isEmpty(email)) {
                     tv_email.setText("Enter valid email");
                     tv_email.setTextColor(getColor(R.color.red));
-                    return;
                 }
                 if (TextUtils.isEmpty(password)) {
                     tv_password.setText("Enter your password");
                     tv_password.setTextColor(getColor(R.color.red));
-                    return;
                 }
 
                 mAuth.signInWithEmailAndPassword(email, password)

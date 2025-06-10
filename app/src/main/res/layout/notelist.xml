@@ -3,15 +3,17 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_height="95dp"
     android:background="#E0C8C8"
     >
 
     <androidx.cardview.widget.CardView
+        android:id="@+id/card"
         android:layout_width="match_parent"
-        android:layout_height="100dp"
+        android:layout_height="90dp"
         android:layout_marginHorizontal="20dp"
-        app:cardCornerRadius="13dp"
+        app:cardBackgroundColor="#E0C8C8"
+        app:cardCornerRadius="12dp"
         >
 
         <androidx.constraintlayout.widget.ConstraintLayout
@@ -21,26 +23,64 @@
             >
 
             <TextView
-                android:id="@+id/textView"
+                android:id="@+id/note_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="24dp"
+                android:layout_marginStart="40dp"
                 android:layout_marginTop="16dp"
+                android:maxWidth="250dp"
+                android:maxLines="1"
                 android:text="Title"
-                android:textSize="30dp"
+                android:textSize="27dp"
                 android:textStyle="bold"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
             <TextView
-                android:id="@+id/textView2"
+                android:id="@+id/note_date"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="4dp"
                 android:text="TextView"
-                app:layout_constraintStart_toStartOf="@+id/textView"
-                app:layout_constraintTop_toBottomOf="@+id/textView" />
+                app:layout_constraintStart_toStartOf="@+id/note_title"
+                app:layout_constraintTop_toBottomOf="@+id/note_title" />
+
+            <ImageView
+                android:id="@+id/delete"
+                android:layout_width="21dp"
+                android:layout_height="28dp"
+                android:layout_marginTop="2dp"
+                android:layout_marginEnd="8dp"
+                android:rotation="45"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:srcCompat="@drawable/add" />
+
+            <ImageView
+                android:id="@+id/pin"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="7dp"
+                android:scaleX="-1"
+                app:tint="#252323"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintVertical_bias="0.121"
+                app:srcCompat="@drawable/pin2" />
+
+            <ImageView
+                android:id="@+id/locked"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="28dp"
+                android:layout_marginBottom="12dp"
+                app:tint="#252323"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:srcCompat="@drawable/locked" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.cardview.widget.CardView>
+
 </RelativeLayout>

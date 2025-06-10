@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/folder_card_view"
+    android:layout_width="160dp"
+    android:layout_height="160dp"
+    android:layout_margin="8dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="4dp"
+    app:cardBackgroundColor="#C4A6A6"
+    android:clickable="true"
+    android:focusable="true"
+    >
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="8dp">
+
+        <ImageView
+            android:id="@+id/folder_icon"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:src="@drawable/folder1"
+            android:contentDescription="Folder icon"
+            />
+
+        <TextView
+            android:id="@+id/folder_name_text_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="My Folder"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:textAlignment="center" />
+
+        <TextView
+            android:id="@+id/folder_note_count_text_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0 notes"
+            android:textSize="12sp"
+            android:layout_marginTop="4dp"
+            android:textAlignment="center" />
+
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

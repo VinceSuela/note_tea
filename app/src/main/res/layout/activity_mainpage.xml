@@ -13,7 +13,7 @@
     <RelativeLayout
         android:id="@+id/header"
         android:layout_width="match_parent"
-        android:layout_height="75dp"
+        android:layout_height="90dp"
         android:layout_alignParentTop="true"
         android:background="#B6A0A0"
         >
@@ -22,7 +22,7 @@
             android:id="@+id/circle"
             android:layout_width="45dp"
             android:layout_height="45dp"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="32dp"
             android:layout_marginLeft="10dp"
             app:srcCompat="@drawable/circle"
             />
@@ -33,7 +33,7 @@
             android:layout_height="wrap_content"
             android:text="User Name"
             android:textStyle="bold"
-            android:layout_marginTop="18dp"
+            android:layout_marginTop="35dp"
             android:layout_toEndOf="@+id/circle"
             android:textColor="#594444"
             android:textSize="18dp"
@@ -41,6 +41,7 @@
             />
 
         <TextView
+            android:id="@+id/tv2"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Your notes and thoughts"
@@ -52,6 +53,17 @@
             android:textColor="#837A7A"
             android:layout_marginLeft="7dp"
             />
+
+        <ImageView
+            android:id="@+id/signout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentBottom="true"
+            android:layout_marginBottom="27dp"
+            app:tint="#252323"
+            android:layout_marginEnd="20dp"
+            app:srcCompat="@drawable/signout" />
 
     </RelativeLayout>
 
@@ -135,6 +147,7 @@
 
 
         <androidx.recyclerview.widget.RecyclerView
+            android:layout_marginTop="3dp"
             android:id="@+id/notelist"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
@@ -229,7 +242,8 @@
                 android:layout_width="21dp"
                 android:layout_height="21dp"
                 android:layout_marginTop="1dp"
-                app:srcCompat="@drawable/pencil2" />
+                app:srcCompat="@drawable/pencil2"
+                app:tint="#252323" />
 
         </LinearLayout>
 
@@ -387,6 +401,7 @@
             />
 
         <RelativeLayout
+            android:id="@+id/folders"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
@@ -396,18 +411,18 @@
 
 
             <ImageView
-                android:id="@+id/gear"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="16dp"
-                app:srcCompat="@drawable/gearsettings" />
+                android:id="@+id/folder"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginLeft="15dp"
+                android:layout_marginTop="-1.5dp"
+                app:srcCompat="@drawable/folder1" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/gear"
-                android:layout_marginTop="1dp"
-                android:text="Settings"
+                android:layout_below="@+id/folder"
+                android:text="Folders"
                 android:textStyle="bold"
                 />
 

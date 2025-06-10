@@ -27,7 +27,7 @@
             app:srcCompat="@drawable/back"
             app:tint="#4D3131" />
 
-        <TextView
+        <EditText
             android:id="@+id/title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -35,35 +35,41 @@
             android:layout_marginLeft="20dp"
             android:layout_toEndOf="@+id/exit"
             android:textSize="30dp"
-            android:text="Note Title"
+            android:textColorHint="#594444"
+            android:textColor="#594444"
+            android:hint="Note Title"
+            android:background="#C4A6A6"
             android:textStyle="bold"
             />
 
         <ImageView
-            android:id="@+id/imageView11"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:id="@+id/check"
+            android:layout_width="23dp"
+            android:layout_height="16dp"
             android:layout_alignParentRight="true"
             android:layout_centerVertical="true"
             android:layout_marginRight="20dp"
             app:tint="#4D3131"
-            app:srcCompat="@drawable/dotsettings" />
+            app:srcCompat="@drawable/check" />
 
     </RelativeLayout>
 
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:hint="Write here..."
         android:layout_below="@+id/header"
         android:layout_above="@+id/footer"
         >
 
         <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/note"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginRight="10dp"
+            android:layout_marginLeft="4dp"
             android:paddingLeft="20dp"
             android:paddingTop="20dp"
-            android:hint="Write here..."
             android:background="#E0C8C8"
             />
     </com.google.android.material.textfield.TextInputLayout>

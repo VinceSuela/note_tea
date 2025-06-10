@@ -84,7 +84,7 @@
         android:background="@drawable/rectangle10"
         android:ems="10"
         android:textColor="#4D3131"
-        android:inputType="text"
+        android:inputType="textPassword"
         android:paddingLeft="15dp"
         android:hint="Enter your Password"
         android:textColorHint="#9F8F8F" />
@@ -159,6 +159,7 @@
         >
 
         <RelativeLayout
+            android:id="@+id/about"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
@@ -192,6 +193,7 @@
              />
 
         <RelativeLayout
+            android:id="@+id/contact"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"

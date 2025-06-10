@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#E0C8C8"
+    tools:context=".FolderNotesActivity">
+
+
+
+
+
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@+id/footer"
+        >
+
+        <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar_folder_notes"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/rectangle6"
+        android:layout_marginHorizontal="10dp"
+        android:layout_marginTop="35dp"
+        android:layout_centerHorizontal="true"
+        android:elevation="4dp"
+        app:titleTextColor="@android:color/white"
+        app:navigationIcon="?attr/homeAsUpIndicator" />
+
+        <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/folder_notes_recycler_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@+id/toolbar_folder_notes"
+        android:padding="8dp"
+        android:clipToPadding="false"
+        tools:listitem="@layout/notelist" />
+
+
+
+    </RelativeLayout>
+
+
+    <LinearLayout
+        android:id="@+id/footer"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_alignParentBottom="true"
+        android:gravity="center"
+        android:background="#B6A0A0"
+        android:orientation="horizontal"
+        >
+
+
+    </LinearLayout>
+
+
+
+</RelativeLayout>
+

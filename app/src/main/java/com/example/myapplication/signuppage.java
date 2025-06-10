@@ -66,12 +66,10 @@ public class signuppage extends AppCompatActivity {
                 if (TextUtils.isEmpty(email)) {
                     tv_email.setText("Enter email");
                     tv_email.setTextColor(getColor(R.color.red));
-                    return;
                 }
                 if (TextUtils.isEmpty(password)) {
                     tv_password.setText("Enter password");
                     tv_password.setTextColor(getColor(R.color.red));
-                    return;
                 }
 
                 mAuth.createUserWithEmailAndPassword(email, password)
