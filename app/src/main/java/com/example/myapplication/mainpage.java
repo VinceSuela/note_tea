@@ -186,7 +186,8 @@ public class mainpage extends AppCompatActivity
             toggleAddNoteMenu();
         });
         listLayout.setOnClickListener(v -> {
-            Toast.makeText(mainpage.this, "List notes are managed on the miscellaneous page.", Toast.LENGTH_SHORT).show();
+            Intent intent = new Intent(mainpage.this, todolistpage.class);
+            startActivity(intent);
             toggleAddNoteMenu();
         });
 
