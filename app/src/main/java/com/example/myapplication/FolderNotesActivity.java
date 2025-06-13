@@ -1,5 +1,6 @@
 package com.example.myapplication;
 
+
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
@@ -37,6 +38,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
@@ -210,7 +212,9 @@ public class FolderNotesActivity extends AppCompatActivity
                         note noteItem = doc.toObject(note.class);
                         if (noteItem != null) {
                             noteItem.setNote_id(doc.getId());
-                            if (noteItem.getType() == null) noteItem.setType("text");
+                            if (noteItem.getType() == null || !noteItem.getType().equals("text")) {
+                                noteItem.setType("text");
+                            }
                             notesModels.add(noteItem);
                         }
                     }
@@ -220,6 +224,18 @@ public class FolderNotesActivity extends AppCompatActivity
                         note noteItem = doc.toObject(note.class);
                         if (noteItem != null) {
                             noteItem.setNote_id(doc.getId());
+                            if (noteItem.getType() == null || "note".equals(noteItem.getType())) {
+                                if (noteItem.getImageUrl() != null && !noteItem.getImageUrl().isEmpty()) {
+                                    noteItem.setType("drawing");
+                                } else if (noteItem.getNote_content() != null &&
+                                        (noteItem.getNote_content().contains("☐") || noteItem.getNote_content().contains("☑"))) {
+                                    noteItem.setType("list");
+                                }
+                                else {
+                                    Log.w(TAG, "Could not infer specific type for misc note " + doc.getId() + ". Defaulting to 'list'.");
+                                    noteItem.setType("list");
+                                }
+                            }
                             notesModels.add(noteItem);
                         }
                     }
@@ -227,7 +243,6 @@ public class FolderNotesActivity extends AppCompatActivity
                     Collections.sort(notesModels, new Comparator<note>() {
                         @Override
                         public int compare(note n1, note n2) {
-
                             int pinnedCompare = Boolean.compare(n2.getIsPinned(), n1.getIsPinned());
                             if (pinnedCompare != 0) {
                                 return pinnedCompare;
@@ -268,7 +283,6 @@ public class FolderNotesActivity extends AppCompatActivity
 
     @Override
     public void onItemClicked(note note) {
-
         if (note.getIsLocked()) {
             showVerifyPinDialog(note.getNote_id(), notesModels.indexOf(note), true, note.getType());
         } else {
@@ -278,7 +292,7 @@ public class FolderNotesActivity extends AppCompatActivity
 
     @Override
     public void onPinClick(int position, boolean currentPinnedStatus) {
-        if (position != RecyclerView.NO_POSITION) {
+        if (position != RecyclerView.NO_POSITION && position < notesModels.size()) {
             note noteToUpdate = notesModels.get(position);
             String documentId = noteToUpdate.getNote_id();
             String noteType = noteToUpdate.getType();
@@ -537,7 +551,7 @@ public class FolderNotesActivity extends AppCompatActivity
             }
             String hashedPin = hashPin(pin);
             if (hashedPin != null) {
-                note noteToUpdate = notesModels.get(position); // Get note to retrieve its type
+                note noteToUpdate = notesModels.get(position);
                 updateNoteLockStatus(noteId, position, true, hashedPin, noteToUpdate.getType());
             }
         });
@@ -563,7 +577,6 @@ public class FolderNotesActivity extends AppCompatActivity
                 Toast.makeText(this, "PIN correct!", Toast.LENGTH_SHORT).show();
 
                 if (openingNote) {
-
                     note tempNoteForOpening = new note(
                             noteToVerify.getImageUrl(),
                             noteToVerify.getType(),
@@ -657,7 +670,6 @@ public class FolderNotesActivity extends AppCompatActivity
             intent.putExtra("deleted_date", note.getDeleted_date());
             startActivity(intent);
         }
-
         else {
             Toast.makeText(this, "Cannot open unsupported note type: " + noteType, Toast.LENGTH_SHORT).show();
             Log.w(TAG, "Attempted to open unsupported note type: " + noteType + " for note ID: " + note.getNote_id());
@@ -671,7 +683,7 @@ public class FolderNotesActivity extends AppCompatActivity
         }
         if ("text".equals(noteType)) {
             return userRef.collection("notes");
-        } else if ("drawing".equals(noteType) || "audio".equals(noteType) || "image".equals(noteType) || "list".equals(noteType)) {
+        } else if (Arrays.asList("drawing", "audio", "image", "list").contains(noteType)) {
             return userRef.collection("miscellaneous_notes");
         }
         Log.e(TAG, "Unknown note type encountered in getNoteCollectionRef: " + noteType + ". Defaulting to 'notes'.");

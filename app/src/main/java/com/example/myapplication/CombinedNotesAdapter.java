@@ -43,6 +43,7 @@ public class CombinedNotesAdapter extends RecyclerView.Adapter<RecyclerView.View
         } else if ("drawing".equals(currentNote.getType()) || "audio".equals(currentNote.getType()) || "image".equals(currentNote.getType()) || "list".equals(currentNote.getType())) {
             return VIEW_TYPE_MISCELLANEOUS_NOTE;
         }
+        // Fallback for unknown types - ensures a view type is always returned
         Log.w(TAG, "Unknown note type encountered: " + currentNote.getType() + " at position " + position + ". Defaulting to text note layout.");
         return VIEW_TYPE_TEXT_NOTE;
     }
@@ -66,61 +67,81 @@ public class CombinedNotesAdapter extends RecyclerView.Adapter<RecyclerView.View
 
         if (holder.getItemViewType() == VIEW_TYPE_TEXT_NOTE) {
             TextNoteViewHolder textHolder = (TextNoteViewHolder) holder;
-            textHolder.note_title.setText(currentNote.getNote_title());
-            textHolder.note_date.setText(currentNote.getNote_date());
-            textHolder.note_content.setText(currentNote.getNote_content());
 
-            if (currentNote.getIsPinned()) {
-                textHolder.pin.setImageResource(R.drawable.pinned);
+            // Defensive null check for note_title TextView
+            if (textHolder.note_title != null) {
+                textHolder.note_title.setText(currentNote.getNote_title());
             } else {
-                textHolder.pin.setImageResource(R.drawable.pin2);
+                Log.e(TAG, "TextNoteViewHolder's note_title TextView is null for note: " + currentNote.getNote_id());
             }
-            textHolder.pin.setVisibility(View.VISIBLE);
 
-            if (currentNote.getIsLocked()) {
-                textHolder.locked.setVisibility(View.VISIBLE);
-                textHolder.locked.setImageResource(R.drawable.locked);
-            } else {
-                textHolder.locked.setVisibility(View.GONE);
+            if (textHolder.note_date != null) {
+                textHolder.note_date.setText(currentNote.getNote_date());
             }
-            textHolder.delete.setVisibility(View.VISIBLE);
+            if (textHolder.note_content != null) {
+                textHolder.note_content.setText(currentNote.getNote_content());
+            }
+
+            if (textHolder.pin != null) {
+                if (currentNote.getIsPinned()) {
+                    textHolder.pin.setImageResource(R.drawable.pinned);
+                } else {
+                    textHolder.pin.setImageResource(R.drawable.pin2);
+                }
+                textHolder.pin.setVisibility(View.VISIBLE);
+            }
+
+            if (textHolder.locked != null) {
+                if (currentNote.getIsLocked()) {
+                    textHolder.locked.setVisibility(View.VISIBLE);
+                    textHolder.locked.setImageResource(R.drawable.locked);
+                } else {
+                    textHolder.locked.setVisibility(View.GONE);
+                }
+            }
+            if (textHolder.delete != null) {
+                textHolder.delete.setVisibility(View.VISIBLE);
+            }
 
         } else if (holder.getItemViewType() == VIEW_TYPE_MISCELLANEOUS_NOTE) {
             MiscellaneousNoteViewHolder miscHolder = (MiscellaneousNoteViewHolder) holder;
-            miscHolder.noteTitle.setText(currentNote.getNote_title());
+
+            if (miscHolder.noteTitle != null) {
+                miscHolder.noteTitle.setText(currentNote.getNote_title());
+            } else {
+                Log.e(TAG, "MiscellaneousNoteViewHolder's noteTitle TextView is null for note: " + currentNote.getNote_id());
+            }
+
 
             if ("drawing".equals(currentNote.getType()) && currentNote.getImageUrl() != null && !currentNote.getImageUrl().isEmpty()) {
-                try {
-                    byte[] decodedString = Base64.decode(currentNote.getImageUrl(), Base64.DEFAULT);
-                    Bitmap decodedBitmap = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
-                    if (decodedBitmap != null) {
-                        miscHolder.drawingThumbnail.setImageBitmap(decodedBitmap);
-                        miscHolder.drawingThumbnail.setVisibility(View.VISIBLE);
-                    } else {
+                if (miscHolder.drawingThumbnail != null) {
+                    try {
+                        byte[] decodedString = Base64.decode(currentNote.getImageUrl(), Base64.DEFAULT);
+                        Bitmap decodedBitmap = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
+                        if (decodedBitmap != null) {
+                            miscHolder.drawingThumbnail.setImageBitmap(decodedBitmap);
+                            miscHolder.drawingThumbnail.setVisibility(View.VISIBLE);
+                        } else {
+                            miscHolder.drawingThumbnail.setImageResource(R.drawable.placeholder_drawing);
+                            miscHolder.drawingThumbnail.setVisibility(View.VISIBLE);
+                            Log.e(TAG, "Failed to decode Base64 to bitmap for drawing: " + currentNote.getNote_id());
+                        }
+                    } catch (IllegalArgumentException e) {
                         miscHolder.drawingThumbnail.setImageResource(R.drawable.placeholder_drawing);
                         miscHolder.drawingThumbnail.setVisibility(View.VISIBLE);
-                        Log.e(TAG, "Failed to decode Base64 to bitmap for drawing: " + currentNote.getNote_id());
+                        Log.e(TAG, "Invalid Base64 string for drawing: " + currentNote.getNote_id(), e);
+                    } catch (Exception e) {
+                        miscHolder.drawingThumbnail.setImageResource(R.drawable.placeholder_drawing);
+                        miscHolder.drawingThumbnail.setVisibility(View.VISIBLE);
+                        Log.e(TAG, "Error processing Base64 image for drawing: " + currentNote.getNote_id(), e);
                     }
-                } catch (IllegalArgumentException e) {
-                    miscHolder.drawingThumbnail.setImageResource(R.drawable.placeholder_drawing);
-                    miscHolder.drawingThumbnail.setVisibility(View.VISIBLE);
-                    Log.e(TAG, "Invalid Base64 string for drawing: " + currentNote.getNote_id(), e);
-                } catch (Exception e) {
-                    miscHolder.drawingThumbnail.setImageResource(R.drawable.placeholder_drawing);
-                    miscHolder.drawingThumbnail.setVisibility(View.VISIBLE);
-                    Log.e(TAG, "Error processing Base64 image for drawing: " + currentNote.getNote_id(), e);
                 }
-            } else if ("audio".equals(currentNote.getType())) {
-                miscHolder.drawingThumbnail.setImageResource(R.drawable.placeholder_drawing);
-                miscHolder.drawingThumbnail.setVisibility(View.VISIBLE);
-            } else if ("image".equals(currentNote.getType())) {
-                miscHolder.drawingThumbnail.setImageResource(R.drawable.placeholder_drawing);
-                miscHolder.drawingThumbnail.setVisibility(View.VISIBLE);
-            } else if ("list".equals(currentNote.getType())) {
-                miscHolder.drawingThumbnail.setImageResource(R.drawable.placeholder_drawing);
-                miscHolder.drawingThumbnail.setVisibility(View.VISIBLE);
             } else {
-                miscHolder.drawingThumbnail.setVisibility(View.GONE);
+                if (miscHolder.drawingThumbnail != null) {
+                    miscHolder.drawingThumbnail.setImageResource(R.drawable.placeholder_drawing);
+                    miscHolder.drawingThumbnail.setVisibility(View.VISIBLE);
+                    Log.d(TAG, "Showing placeholder for miscellaneous note type: " + currentNote.getType() + ", ID: " + currentNote.getNote_id());
+                }
             }
 
             if (miscHolder.noteDate != null) {
@@ -135,20 +156,27 @@ public class CombinedNotesAdapter extends RecyclerView.Adapter<RecyclerView.View
                         currentNote.getType().substring(0, 1).toUpperCase() + currentNote.getType().substring(1) + " Note" :
                         "Miscellaneous Note");
                 miscHolder.noteContent.setVisibility(View.VISIBLE);
+            } else {
+                Log.e(TAG, "MiscellaneousNoteViewHolder's noteContent TextView is null for note: " + currentNote.getNote_id());
             }
 
-            if (currentNote.getIsPinned()) {
-                miscHolder.pinIcon.setImageResource(R.drawable.pinned);
-            } else {
-                miscHolder.pinIcon.setImageResource(R.drawable.pin2);
-            }
-            miscHolder.pinIcon.setVisibility(View.VISIBLE);
 
-            if (currentNote.getIsLocked()) {
-                miscHolder.lockedIcon.setVisibility(View.VISIBLE);
-                miscHolder.lockedIcon.setImageResource(R.drawable.locked);
-            } else {
-                miscHolder.lockedIcon.setVisibility(View.GONE);
+            if (miscHolder.pinIcon != null) {
+                if (currentNote.getIsPinned()) {
+                    miscHolder.pinIcon.setImageResource(R.drawable.pinned);
+                } else {
+                    miscHolder.pinIcon.setImageResource(R.drawable.pin2);
+                }
+                miscHolder.pinIcon.setVisibility(View.VISIBLE);
+            }
+
+            if (miscHolder.lockedIcon != null) {
+                if (currentNote.getIsLocked()) {
+                    miscHolder.lockedIcon.setVisibility(View.VISIBLE);
+                    miscHolder.lockedIcon.setImageResource(R.drawable.locked);
+                } else {
+                    miscHolder.lockedIcon.setVisibility(View.GONE);
+                }
             }
         }
     }
@@ -185,6 +213,8 @@ public class CombinedNotesAdapter extends RecyclerView.Adapter<RecyclerView.View
                     }
                     return true;
                 });
+            } else {
+                Log.e(TAG, "TextNoteViewHolder: noteCardView is null.");
             }
             if (delete != null) {
                 delete.setOnClickListener(v -> {
@@ -192,6 +222,8 @@ public class CombinedNotesAdapter extends RecyclerView.Adapter<RecyclerView.View
                         rv_onClick.onDeleteClick(getAdapterPosition());
                     }
                 });
+            } else {
+                Log.w(TAG, "TextNoteViewHolder: delete ImageView is null.");
             }
             if (pin != null) {
                 pin.setOnClickListener(v -> {
@@ -200,6 +232,8 @@ public class CombinedNotesAdapter extends RecyclerView.Adapter<RecyclerView.View
                         rv_onClick.onPinClick(getAdapterPosition(), currentPinnedState);
                     }
                 });
+            } else {
+                Log.w(TAG, "TextNoteViewHolder: pin ImageView is null.");
             }
         }
     }
@@ -237,6 +271,8 @@ public class CombinedNotesAdapter extends RecyclerView.Adapter<RecyclerView.View
                     }
                     return true;
                 });
+            } else {
+                Log.e(TAG, "MiscellaneousNoteViewHolder: listCardView is null.");
             }
             if (deleteIcon != null) {
                 deleteIcon.setOnClickListener(v -> {
@@ -244,6 +280,8 @@ public class CombinedNotesAdapter extends RecyclerView.Adapter<RecyclerView.View
                         rv_onClick.onDeleteClick(getAdapterPosition());
                     }
                 });
+            } else {
+                Log.w(TAG, "MiscellaneousNoteViewHolder: deleteIcon ImageView is null.");
             }
             if (pinIcon != null) {
                 pinIcon.setOnClickListener(v -> {
@@ -252,6 +290,8 @@ public class CombinedNotesAdapter extends RecyclerView.Adapter<RecyclerView.View
                         rv_onClick.onPinClick(getAdapterPosition(), currentPinnedState);
                     }
                 });
+            } else {
+                Log.w(TAG, "MiscellaneousNoteViewHolder: pinIcon ImageView is null.");
             }
         }
     }

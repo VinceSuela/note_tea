@@ -3,6 +3,7 @@ package com.example.myapplication;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
@@ -659,19 +660,50 @@ public class secondarypage extends AppCompatActivity
 
     @Override
     public void onDeleteClick(int position) {
-        Log.d(TAG, "onDeleteClick: Position " + position);
-        if (position >= 0 && position < filteredNoteList.size()) {
-            note noteToDelete = filteredNoteList.get(position);
-            if (noteToDelete != null && noteToDelete.getNote_id() != null && noteToDelete.getType() != null) {
-                updateNoteStatusInFirestore(noteToDelete.getNote_id(), noteToDelete.getType(), "isDeleted", true, "Note moved to bin.");
-            } else {
-                Log.e(TAG, "onDeleteClick: Note or its ID/Type is null at position " + position);
-                Toast.makeText(this, "Error: Cannot delete invalid note.", Toast.LENGTH_SHORT).show();
-            }
+        String  currentTime = new SimpleDateFormat("dd-MM-yyyy HH:mm", Locale.getDefault()).format(new Date()).toString();
+        if (position != RecyclerView.NO_POSITION && position < filteredNoteList.size()) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Move to Bin")
+                    .setMessage("Are you sure you want to move this note to the bin?")
+                    .setPositiveButton("Move to Bin", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int which) {
+                            note noteToDelete = filteredNoteList.get(position);
+                            String documentId = noteToDelete.getNote_id();
+                            String noteType = noteToDelete.getType();
+
+                            if (documentId != null && !documentId.isEmpty() && noteType != null) {
+                                FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+                                if (currentUser != null) {
+                                    Map<String, Object> updates = new HashMap<>();
+                                    updates.put("isDeleted", true);
+                                    updates.put("deleted_date", currentTime);
+                                    updates.put("timestamp", new Date());
+
+                                    getNoteCollectionRef(noteType)
+                                            .document(documentId)
+                                            .update(updates)
+                                            .addOnSuccessListener(aVoid -> {
+                                                Toast.makeText(secondarypage.this, "Note moved to bin!", Toast.LENGTH_SHORT).show();
+                                            })
+                                            .addOnFailureListener(e -> {
+                                                Toast.makeText(secondarypage.this, "Error moving note to bin: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                                            });
+                                } else {
+                                    Toast.makeText(secondarypage.this, "User not authenticated for deletion.", Toast.LENGTH_SHORT).show();
+                                }
+                            } else {
+                                Toast.makeText(secondarypage.this, "Note ID or type is missing, cannot move to bin.", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    })
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .setIcon(android.R.drawable.ic_menu_delete)
+                    .show();
         } else {
-            Log.e(TAG, "onDeleteClick: Invalid position " + position);
+            Toast.makeText(this, "Error: Invalid note position for action.", Toast.LENGTH_SHORT).show();
         }
     }
+
 
     @Override
     public void onPinClick(int position, boolean currentPinnedStatus) {

@@ -371,7 +371,7 @@ public class folderpage extends AppCompatActivity implements FolderAdapter.OnFol
     }
 
     private void showDeleteFolderConfirmation(Folder folder) {
-        String time = new SimpleDateFormat("dd-MM-yyyy HH:mm", Locale.getDefault()).format(new Date()).toString();
+        String time = new SimpleDateFormat("dd-MM-yyyy HH:mm", Locale.getDefault()).format(new Date());
 
         new AlertDialog.Builder(this)
                 .setTitle("Delete Folder")
@@ -383,47 +383,59 @@ public class folderpage extends AppCompatActivity implements FolderAdapter.OnFol
                         deletionProgressDialog.setCancelable(false);
                         deletionProgressDialog.show();
 
-                        db.collection("users").document(uid)
+
+                        Task<QuerySnapshot> textNotesTask = db.collection("users").document(uid)
                                 .collection("notes")
                                 .whereEqualTo("folder_id", folder.getFolder_id())
-                                .get()
-                                .addOnSuccessListener(queryDocumentSnapshots -> {
+                                .get();
+
+
+                        Task<QuerySnapshot> miscNotesTask = db.collection("users").document(uid)
+                                .collection("miscellaneous_notes")
+                                .whereEqualTo("folder_id", folder.getFolder_id())
+                                .get();
+
+                        Tasks.whenAllSuccess(textNotesTask, miscNotesTask)
+                                .continueWithTask(task -> {
                                     List<Task<Void>> noteUpdateTasks = new ArrayList<>();
-                                    for (DocumentSnapshot doc : queryDocumentSnapshots) {
+                                    QuerySnapshot textNotes = (QuerySnapshot) task.getResult().get(0);
+                                    for (DocumentSnapshot doc : textNotes) {
                                         Map<String, Object> updates = new HashMap<>();
                                         updates.put("isDeleted", true);
                                         updates.put("deleted_date", time);
                                         updates.put("folder_id", null);
-
+                                        updates.put("timestamp", new Date());
                                         noteUpdateTasks.add(doc.getReference().update(updates));
                                     }
 
+                                    QuerySnapshot miscNotes = (QuerySnapshot) task.getResult().get(1);
+                                    for (DocumentSnapshot doc : miscNotes) {
+                                        Map<String, Object> updates = new HashMap<>();
+                                        updates.put("isDeleted", true);
+                                        updates.put("deleted_date", time);
+                                        updates.put("folder_id", null);
+                                        updates.put("timestamp", new Date());
+                                        noteUpdateTasks.add(doc.getReference().update(updates));
+                                    }
+                                    return Tasks.whenAll(noteUpdateTasks);
+                                })
+                                .addOnSuccessListener(aVoid -> {
 
-                                    Tasks.whenAllSuccess(noteUpdateTasks)
-                                            .addOnSuccessListener(aVoid -> {
-                                                db.collection("users").document(uid)
-                                                        .collection("folders").document(folder.getFolder_id())
-                                                        .delete()
-                                                        .addOnSuccessListener(v -> {
-                                                            deletionProgressDialog.dismiss();
-                                                            Toast.makeText(folderpage.this, "Folder deleted and notes moved to bin!", Toast.LENGTH_SHORT).show();
-                                                        })
-                                                        .addOnFailureListener(e -> {
-                                                            deletionProgressDialog.dismiss();
-                                                            Toast.makeText(folderpage.this, "Error deleting folder: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                                                            Log.e("folderpage", "Error deleting folder itself", e);
-                                                        });
+                                    db.collection("users").document(uid)
+                                            .collection("folders").document(folder.getFolder_id())
+                                            .delete()
+                                            .addOnSuccessListener(v -> {
+                                                deletionProgressDialog.dismiss();
+                                                Toast.makeText(folderpage.this, "Folder deleted and notes moved to bin!", Toast.LENGTH_SHORT).show();
                                             })
                                             .addOnFailureListener(e -> {
                                                 deletionProgressDialog.dismiss();
-                                                Toast.makeText(folderpage.this, "Error moving notes to bin: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                                                Log.e("folderpage", "Error updating notes to bin status", e);
+                                                Toast.makeText(folderpage.this, "Error deleting folder: " + e.getMessage(), Toast.LENGTH_LONG).show();
                                             });
                                 })
                                 .addOnFailureListener(e -> {
                                     deletionProgressDialog.dismiss();
-                                    Toast.makeText(folderpage.this, "Error finding notes in folder: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                                    Log.e("folderpage", "Error querying notes in folder", e);
+                                    Toast.makeText(folderpage.this, "Error moving notes to bin: " + e.getMessage(), Toast.LENGTH_LONG).show();
                                 });
                     }
                 })

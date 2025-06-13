@@ -30,8 +30,11 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.EventListener;
@@ -46,6 +49,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
@@ -135,9 +139,6 @@ public class mainpage extends AppCompatActivity
         myadapter = new myadapter(mainpage.this, notesModels, this, isGridLayout);
         recyclerView.setAdapter(myadapter);
         recyclerView.setItemAnimator(null);
-
-
-
 
 
         if (!progressDialog.isShowing()) {
@@ -247,10 +248,6 @@ public class mainpage extends AppCompatActivity
 
         Animation cp_animation = AnimationUtils.loadAnimation(this, R.anim.circleplus);
         Animation cp_animation2 = AnimationUtils.loadAnimation(this, R.anim.circleplus2);
-//        Animation a_audio = AnimationUtils.loadAnimation(this, R.anim.aidlt_alpha);
-//        Animation a_audio2 = AnimationUtils.loadAnimation(this, R.anim.aidlt);
-//        Animation a_image = AnimationUtils.loadAnimation(this, R.anim.aidlt_alpha);
-//        Animation a_image2 = AnimationUtils.loadAnimation(this, R.anim.aidlt);
         Animation a_drawing = AnimationUtils.loadAnimation(this, R.anim.aidlt_alpha);
         Animation a_drawing2 = AnimationUtils.loadAnimation(this, R.anim.aidlt);
         Animation a_list = AnimationUtils.loadAnimation(this, R.anim.aidlt_alpha);
@@ -275,12 +272,6 @@ public class mainpage extends AppCompatActivity
                     Runnable runnable2 =  () -> drawing.startAnimation(a_drawing);
                     new Handler(Looper.getMainLooper()).postDelayed(runnable2, 75);
 
-//                    Runnable runnable3 =  () -> image.startAnimation(a_image);
-//                    new Handler(Looper.getMainLooper()).postDelayed(runnable3, 100);
-//
-//                    Runnable runnable4 =  () -> audio.startAnimation(a_audio);
-//                    new Handler(Looper.getMainLooper()).postDelayed(runnable4, 125);
-
                     num = 1;
                 }
 
@@ -296,12 +287,6 @@ public class mainpage extends AppCompatActivity
 
                     Runnable runnable2 =  () -> drawing.startAnimation(a_drawing2);
                     new Handler(Looper.getMainLooper()).postDelayed(runnable2, 75);
-
-//                    Runnable runnable3 =  () -> image.startAnimation(a_image2);
-//                    new Handler(Looper.getMainLooper()).postDelayed(runnable3, 50);
-//
-//                    Runnable runnable4 =  () -> audio.startAnimation(a_audio2);
-//                    new Handler(Looper.getMainLooper()).postDelayed(runnable4, 25);
                 }
             }
         });
@@ -318,21 +303,14 @@ public class mainpage extends AppCompatActivity
                 if (item.getNote_title() != null && item.getNote_title().toLowerCase().contains(lowerCaseQuery)) {
                     notesModels.add(item);
                 }
-//                else if (item.getNote_content() != null && item.getNote_content().toLowerCase().contains(lowerCaseQuery)) {
-//                     notesModels.add(item);
-//                }
             }
         }
         myadapter.notifyDataSetChanged();
     }
 
 
-
-
     private void noteChangeListener() {
         if (userRef == null) {
-            Log.e("mainpage", "userRef is null, cannot set up Firestore listener.");
-
             if (progressDialog != null && progressDialog.isShowing()) {
                 progressDialog.dismiss();
             }
@@ -354,12 +332,10 @@ public class mainpage extends AppCompatActivity
 
                         if (error != null) {
                             Toast.makeText(mainpage.this, "Failed to load notes: " + error.getMessage(), Toast.LENGTH_SHORT).show();
-                            Log.e("Mainpage", "Firestore error for main notes: ", error);
                             return;
                         }
 
                         if (value == null) {
-                            Log.d("Mainpage", "Received null QuerySnapshot for main notes.");
                             return;
                         }
 
@@ -390,7 +366,6 @@ public class mainpage extends AppCompatActivity
                     @Override
                     public void onEvent(@Nullable QuerySnapshot value, @Nullable FirebaseFirestoreException error) {
                         if (error != null) {
-                            Log.e("mainpage", "Folders listen failed.", error);
                             return;
                         }
                         if (value == null) return;
@@ -426,9 +401,8 @@ public class mainpage extends AppCompatActivity
 
     @Override
     public void onItemClicked(note note) {
-        Intent intent = new Intent(getApplicationContext(), textnoteedit.class);
         if (note.getIsLocked()) {
-            showVerifyPinDialog(note.getNote_id(), notesModels.indexOf(note), true);
+            showVerifyPinDialog(note.getNote_id(), notesModels.indexOf(note), true, note.getType());
         } else {
             openNoteForEditing(note);
         }
@@ -439,21 +413,24 @@ public class mainpage extends AppCompatActivity
         if (position != RecyclerView.NO_POSITION) {
             note noteToUpdate = notesModels.get(position);
             String documentId = noteToUpdate.getNote_id();
+            String noteType = noteToUpdate.getType();
 
-            if (documentId != null && !documentId.isEmpty()) {
+            if (documentId != null && !documentId.isEmpty() && noteType != null) {
                 boolean newPinnedStatus = !currentPinnedStatus;
 
                 Map<String, Object> updates = new HashMap<>();
                 updates.put("isPinned", newPinnedStatus);
+                updates.put("timestamp", new Date());
 
-                userRef.collection("notes").document(documentId).update(updates)
+                getNoteCollectionRef(noteType).document(documentId).update(updates)
                         .addOnSuccessListener(aVoid -> {
+                            Toast.makeText(mainpage.this, "Pin status updated!", Toast.LENGTH_SHORT).show();
                         })
                         .addOnFailureListener(e -> {
                             Toast.makeText(mainpage.this, "Error toggling pin status: " + e.getMessage(), Toast.LENGTH_LONG).show();
                         });
             } else {
-                Toast.makeText(mainpage.this, "Error: Note ID missing for pin toggle.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(mainpage.this, "Error: Note ID or type missing for pin toggle.", Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -470,7 +447,7 @@ public class mainpage extends AppCompatActivity
                     selectedNote.getNote_id(),
                     position,
                     selectedNote.getFolder_id(),
-                    selectedNote.getType() // Added the missing noteType argument here
+                    selectedNote.getType()
             );
             fragment.show(getSupportFragmentManager(), "NoteActionsDialogFragment");
         }
@@ -478,12 +455,10 @@ public class mainpage extends AppCompatActivity
 
     @Override
     public void onRestoreNote(String noteId, int position) {
-
     }
 
     @Override
     public void onPermanentlyDeleteNote(String noteId, int position) {
-
     }
 
     @Override
@@ -493,7 +468,9 @@ public class mainpage extends AppCompatActivity
 
     @Override
     public void onUnlockNote(String noteId, int position) {
-        showVerifyPinDialog(noteId, position, false);
+        note noteToUnlock = notesModels.get(position);
+        // Pass the note type here as well
+        showVerifyPinDialog(noteId, position, false, noteToUnlock.getType());
     }
 
     @Override
@@ -503,11 +480,6 @@ public class mainpage extends AppCompatActivity
 
     @Override
     public void onAddToFolder(String noteId, String noteType, int position) {
-
-    }
-
-    @Override
-    public void onAddToFolder(String noteId, int position) {
         selectedNoteIdForFolder = noteId;
 
         if (folderArrayList.isEmpty()) {
@@ -524,25 +496,55 @@ public class mainpage extends AppCompatActivity
         builder.setTitle("Select Folder");
         builder.setItems(folderNames, (dialog, which) -> {
             Folder selectedFolder = folderArrayList.get(which);
-            assignNoteToFolder(selectedNoteIdForFolder, selectedFolder.getFolder_id());
+            assignNoteToFolder(selectedNoteIdForFolder, selectedFolder.getFolder_id(), noteType);
         });
         builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
         builder.show();
     }
 
     @Override
-    public void onRemoveFromFolder(String noteId, int position) {
+    public void onAddToFolder(String noteId, int position) {
+        selectedNoteIdForFolder = noteId;
 
+        if (position != RecyclerView.NO_POSITION && position < notesModels.size()) {
+            note noteToMove = notesModels.get(position);
+            String noteType = noteToMove.getType();
+
+            if (folderArrayList.isEmpty()) {
+                Toast.makeText(this, "No folders available. Please create one first.", Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            String[] folderNames = new String[folderArrayList.size()];
+            for (int i = 0; i < folderArrayList.size(); i++) {
+                folderNames[i] = folderArrayList.get(i).getFolder_name();
+            }
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("Select Folder");
+            builder.setItems(folderNames, (dialog, which) -> {
+                Folder selectedFolder = folderArrayList.get(which);
+                assignNoteToFolder(selectedNoteIdForFolder, selectedFolder.getFolder_id(), noteType);
+            });
+            builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
+            builder.show();
+        } else {
+            Toast.makeText(this, "Error: Invalid note position for action.", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+
+    @Override
+    public void onRemoveFromFolder(String noteId, int position) {
+        Toast.makeText(this, "This note is not currently in a folder.", Toast.LENGTH_SHORT).show();
     }
 
     @Override
     public void onRestoreNote(String noteId, String noteType) {
-
     }
 
     @Override
     public void onPermanentlyDeleteNote(String noteId, String noteType) {
-
     }
 
 
@@ -557,7 +559,6 @@ public class mainpage extends AppCompatActivity
             }
             return hashtext;
         } catch (NoSuchAlgorithmException e) {
-            Log.e("Hashing", "SHA-256 algorithm not found", e);
             Toast.makeText(this, "Hashing error, cannot secure note.", Toast.LENGTH_SHORT).show();
             return null;
         }
@@ -580,14 +581,15 @@ public class mainpage extends AppCompatActivity
             }
             String hashedPin = hashPin(pin);
             if (hashedPin != null) {
-                updateNoteLockStatus(noteId, position, true, hashedPin);
+                note noteToUpdate = notesModels.get(position);
+                updateNoteLockStatus(noteId, position, true, hashedPin, noteToUpdate.getType());
             }
         });
         builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
         builder.show();
     }
 
-    private void showVerifyPinDialog(String noteId, int position, boolean openingNote) {
+    private void showVerifyPinDialog(String noteId, int position, boolean openingNote, @Nullable String noteType) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Enter PIN to " + (openingNote ? "Open" : "Unlock") + " Note");
 
@@ -604,9 +606,24 @@ public class mainpage extends AppCompatActivity
             if (hashedEnteredPin != null && hashedEnteredPin.equals(noteToVerify.getHashedPin())) {
                 Toast.makeText(this, "PIN correct!", Toast.LENGTH_SHORT).show();
                 if (openingNote) {
-                    openNoteForEditing(noteToVerify);
+                    note tempNoteForOpening = new note(
+                            noteToVerify.getImageUrl(),
+                            noteToVerify.getType(),
+                            noteToVerify.getFolder_id(),
+                            noteToVerify.getDeleted_date(),
+                            null,
+                            noteToVerify.getIsDeleted(),
+                            false,
+                            noteToVerify.getIsPinned(),
+                            noteToVerify.getNote_content(),
+                            noteToVerify.getNote_date(),
+                            noteToVerify.getNote_id(),
+                            noteToVerify.getNote_title(),
+                            noteToVerify.getTimestamp()
+                    );
+                    openNoteForEditing(tempNoteForOpening);
                 } else {
-                    updateNoteLockStatus(noteId, position, false, null);
+                    updateNoteLockStatus(noteId, position, false, null, noteToVerify.getType());
                 }
             } else {
                 Toast.makeText(this, "Incorrect PIN.", Toast.LENGTH_SHORT).show();
@@ -616,35 +633,76 @@ public class mainpage extends AppCompatActivity
         builder.show();
     }
 
-    private void updateNoteLockStatus(String noteId, int position, boolean lockedStatus, String hashedPin) {
+
+    private void updateNoteLockStatus(String noteId, int position, boolean lockedStatus, String hashedPin, String noteType) {
+        if (noteType == null) {
+            Toast.makeText(this, "Error: Note type missing for lock update.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         Map<String, Object> updates = new HashMap<>();
         updates.put("isLocked", lockedStatus);
         updates.put("hashedPin", hashedPin);
+        updates.put("timestamp", new Date());
 
-        userRef.collection("notes").document(noteId).update(updates)
+        getNoteCollectionRef(noteType).document(noteId).update(updates)
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(mainpage.this, "Note " + (lockedStatus ? "locked" : "unlocked") + "!", Toast.LENGTH_SHORT).show();
                 })
                 .addOnFailureListener(e -> {
                     Toast.makeText(mainpage.this, "Failed to update lock status: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                    Log.e("Mainpage", "Error updating note lock status", e);
                 });
     }
 
     private void openNoteForEditing(note note) {
-        Intent intent = new Intent(mainpage.this, textnoteedit.class);
-        intent.putExtra("key", note.getNote_id());
-        intent.putExtra("key1", note.getNote_title());
-        intent.putExtra("key2", note.getNote_content());
-        intent.putExtra("key3", note.getIsPinned());
-        intent.putExtra("key4", note.getIsLocked());
-        intent.putExtra("key5", note.getHashedPin());
-        intent.putExtra("key6", note.getFolder_id());
-        intent.putExtra("key7", note.getIsDeleted());
-        intent.putExtra("key8", note.getDeleted_date());
+        String noteType = note.getType();
+        if (noteType == null) {
+            Toast.makeText(this, "Cannot open: Note type is undefined.", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
-        startActivity(intent);
+
+        if ("text".equals(noteType)) {
+            Intent intent = new Intent(mainpage.this, textnoteedit.class);
+            intent.putExtra("key", note.getNote_id());
+            intent.putExtra("key1", note.getNote_title());
+            intent.putExtra("key2", note.getNote_content());
+            intent.putExtra("key3", note.getIsPinned());
+            intent.putExtra("key4", note.getIsLocked());
+            intent.putExtra("key5", note.getHashedPin());
+            intent.putExtra("key6", note.getFolder_id());
+            intent.putExtra("key7", note.getIsDeleted());
+            intent.putExtra("key8", note.getDeleted_date());
+            startActivity(intent);
+        } else if ("drawing".equals(noteType)) {
+            Intent intent = new Intent(mainpage.this, drawingpageedit.class);
+            intent.putExtra("note_id", note.getNote_id());
+            intent.putExtra("note_title", note.getNote_title());
+            intent.putExtra("base64Image", note.getImageUrl());
+            intent.putExtra("isPinned", note.getIsPinned());
+            intent.putExtra("isLocked", note.getIsLocked());
+            intent.putExtra("hashedPin", note.getHashedPin());
+            intent.putExtra("folder_id", note.getFolder_id());
+            intent.putExtra("isDeleted", note.getIsDeleted());
+            intent.putExtra("deleted_date", note.getDeleted_date());
+            startActivity(intent);
+        } else if ("list".equals(noteType)) {
+            Intent intent = new Intent(mainpage.this, todolistpage.class);
+            intent.putExtra("note_id", note.getNote_id());
+            intent.putExtra("note_title", note.getNote_title());
+            intent.putExtra("isPinned", note.getIsPinned());
+            intent.putExtra("isLocked", note.getIsLocked());
+            intent.putExtra("hashedPin", note.getHashedPin());
+            intent.putExtra("folder_id", note.getFolder_id());
+            intent.putExtra("isDeleted", note.getIsDeleted());
+            intent.putExtra("deleted_date", note.getDeleted_date());
+            startActivity(intent);
+        }
+        else {
+            Toast.makeText(this, "Cannot open unsupported note type: " + noteType, Toast.LENGTH_SHORT).show();
+        }
     }
+
 
     @Override
     public void onDeleteClick(int position) {
@@ -657,18 +715,17 @@ public class mainpage extends AppCompatActivity
                         public void onClick(DialogInterface dialog, int which) {
                             note noteToDelete = notesModels.get(position);
                             String documentId = noteToDelete.getNote_id();
+                            String noteType = noteToDelete.getType();
 
-                            if (documentId != null && !documentId.isEmpty()) {
+                            if (documentId != null && !documentId.isEmpty() && noteType != null) {
                                 FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
                                 if (currentUser != null) {
-                                    String uid = currentUser.getUid();
                                     Map<String, Object> updates = new HashMap<>();
                                     updates.put("isDeleted", true);
                                     updates.put("deleted_date", currentTime);
+                                    updates.put("timestamp", new Date());
 
-                                    FirebaseFirestore.getInstance().collection("users")
-                                            .document(uid)
-                                            .collection("notes")
+                                    getNoteCollectionRef(noteType)
                                             .document(documentId)
                                             .update(updates)
                                             .addOnSuccessListener(aVoid -> {
@@ -676,14 +733,12 @@ public class mainpage extends AppCompatActivity
                                             })
                                             .addOnFailureListener(e -> {
                                                 Toast.makeText(mainpage.this, "Error moving note to bin: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                                                Log.e("Mainpage", "Error moving note to bin", e);
                                             });
                                 } else {
                                     Toast.makeText(mainpage.this, "User not authenticated for deletion.", Toast.LENGTH_SHORT).show();
                                 }
                             } else {
-                                Toast.makeText(mainpage.this, "Note ID is missing, cannot move to bin.", Toast.LENGTH_SHORT).show();
-                                Log.e("Mainpage", "Note ID was null or empty for moving to bin at position: " + position);
+                                Toast.makeText(mainpage.this, "Note ID or type is missing, cannot move to bin.", Toast.LENGTH_SHORT).show();
                             }
                         }
                     })
@@ -692,20 +747,26 @@ public class mainpage extends AppCompatActivity
                     .show();
         } else {
             Toast.makeText(this, "Error: Invalid note position for action.", Toast.LENGTH_SHORT).show();
-            Log.e("mainpage", "Attempted action on note at invalid position: " + position);
         }
     }
 
-    private void assignNoteToFolder(String noteId, String folderId) {
-        if (noteId == null || uid == null) {
-            Toast.makeText(this, "Error: Note or user not identified.", Toast.LENGTH_SHORT).show();
+    private void assignNoteToFolder(String noteId, String folderId, String noteType) {
+        if (noteId == null || uid == null || noteType == null) {
+            Toast.makeText(this, "Error: Note, user, or type not identified.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        CollectionReference targetCollection = getNoteCollectionRef(noteType);
+        if (targetCollection == null) {
+            Toast.makeText(this, "Error: Invalid note type for folder assignment.", Toast.LENGTH_SHORT).show();
             return;
         }
 
         Map<String, Object> updates = new HashMap<>();
         updates.put("folder_id", folderId);
+        updates.put("timestamp", new Date());
 
-        userRef.collection("notes").document(noteId)
+        targetCollection.document(noteId)
                 .update(updates)
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(mainpage.this, "Note added to folder!", Toast.LENGTH_SHORT).show();
@@ -746,5 +807,17 @@ public class mainpage extends AppCompatActivity
         if (myadapter != null) {
             myadapter.setLayoutMode(isGridLayout);
         }
+    }
+
+    private CollectionReference getNoteCollectionRef(String noteType) {
+        if (uid == null) {
+            return null;
+        }
+        if ("text".equals(noteType)) {
+            return userRef.collection("notes");
+        } else if (Arrays.asList("drawing", "audio", "image", "list").contains(noteType)) {
+            return userRef.collection("miscellaneous_notes");
+        }
+        return userRef.collection("notes");
     }
 }
