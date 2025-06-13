@@ -18,11 +18,11 @@ public class FolderAdapter extends RecyclerView.Adapter<FolderAdapter.FolderView
 
     private Context context;
     private ArrayList<Folder> folderArrayList;
-    private OnFolderClickListener folderClickListener; // Interface for clicks
+    private OnFolderClickListener folderClickListener;
 
     public interface OnFolderClickListener {
         void onFolderClick(Folder folder);
-        void onFolderLongClick(Folder folder); // For renaming/deleting folders
+        void onFolderLongClick(Folder folder);
     }
 
     public FolderAdapter(Context context, ArrayList<Folder> folderArrayList, OnFolderClickListener folderClickListener) {
@@ -52,13 +52,12 @@ public class FolderAdapter extends RecyclerView.Adapter<FolderAdapter.FolderView
             }
         });
 
-        // Set OnLongClickListener for folder options (rename/delete)
         holder.folderCardView.setOnLongClickListener(v -> {
             if (folderClickListener != null) {
-                folderClickListener.onFolderLongClick(currentFolder); // Pass the Folder object
-                return true; // Consume the long click event
+                folderClickListener.onFolderLongClick(currentFolder);
+                return true;
             }
-            return false; // Do not consume
+            return false;
         });
     }
 
@@ -79,10 +78,6 @@ public class FolderAdapter extends RecyclerView.Adapter<FolderAdapter.FolderView
             folderIcon = itemView.findViewById(R.id.folder_icon);
             folderNameTextView = itemView.findViewById(R.id.folder_name_text_view);
             folderNoteCountTextView = itemView.findViewById(R.id.folder_note_count_text_view);
-
-            // Removed the itemView.setOnLongClickListener from here.
-            // It's handled in onBindViewHolder now, which is more appropriate
-            // for setting listeners based on specific data for each item.
         }
     }
 }

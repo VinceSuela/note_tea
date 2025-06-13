@@ -2,12 +2,14 @@ package com.example.myapplication;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -30,6 +32,7 @@ public class signuppage extends AppCompatActivity {
     Button signup;
     TextView tv_email, tv_password, haveacc;
     FirebaseAuth mAuth;
+    RelativeLayout about, contact;
 
 
     @Override
@@ -37,6 +40,8 @@ public class signuppage extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_signuppage);
 
+        about = findViewById(R.id.about);
+        contact = findViewById(R.id.contact);
         et_email = findViewById(R.id.email);
         et_password = findViewById(R.id.password);
         haveacc = findViewById(R.id.tv6);
@@ -44,6 +49,26 @@ public class signuppage extends AppCompatActivity {
         tv_email = findViewById(R.id.tv3);
         tv_password = findViewById(R.id.tv5);
         mAuth = FirebaseAuth.getInstance();
+        String url = "https://paffle.my.canva.site/notetea";
+
+        about.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(Intent.ACTION_VIEW);
+                intent.setData(Uri.parse(url));
+                startActivity(intent);
+            }
+        });
+
+        contact.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(Intent.ACTION_VIEW);
+                intent.setData(Uri.parse(url));
+                startActivity(intent);
+            }
+        });
+
 
 
         haveacc.setOnClickListener(new View.OnClickListener() {

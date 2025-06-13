@@ -34,13 +34,22 @@ android {
 
 dependencies {
 
+    implementation(libs.richeditor.android)
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.activity)
     implementation(libs.constraintlayout)
     implementation(libs.firebase.auth)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.storage)
     implementation(libs.firebase.firestore)
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
+    implementation(libs.glide.core)
+    annotationProcessor(libs.glide.compiler)
+    implementation(libs.skydoves.colorpickerview)
+    implementation(libs.squareup.okhttp3)
+    implementation(libs.firebase.functions)
+
 }

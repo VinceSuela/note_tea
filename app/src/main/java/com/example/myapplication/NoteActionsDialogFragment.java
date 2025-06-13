@@ -1,49 +1,60 @@
-// com.example.myapplication/NoteActionsDialogFragment.java
 package com.example.myapplication;
 
+import android.app.AlertDialog;
 import android.content.Context;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.DialogFragment;
 
 public class NoteActionsDialogFragment extends DialogFragment {
 
-    // These constants should match the keys used when creating the bundle
-    private static final String ARG_NOTE_ID = "noteId";
-    private static final String ARG_FOLDER_ID = "folderId";
+    private static final String TAG = "NoteActionsDialog";
+
     private static final String ARG_IS_LOCKED = "isLocked";
-    private static final String ARG_IS_PINNED = "isPinned"; // Added for completeness, though not directly used in dialog
-    private static final String ARG_POSITION = "position"; // Added for completeness
+    private static final String ARG_IS_PINNED = "isPinned";
+    private static final String ARG_IS_DELETED = "isDeleted";
+    private static final String ARG_NOTE_ID = "noteId";
+    private static final String ARG_POSITION = "position";
+    private static final String ARG_FOLDER_ID = "folderId";
+    private static final String ARG_NOTE_TYPE = "noteType";
 
-    private NoteActionListener listener;
-    private String noteId, folderId;
-    private boolean isLocked;
-    private boolean isPinned; // Stored, but not directly used in this dialog's UI currently
+    private boolean isLocked, isPinned, isDeleted;
+    private String noteId;
     private int position;
+    private String folderId;
+    private String noteType;
 
-    // Corrected interface to match what mainpage is trying to implement
     public interface NoteActionListener {
-        void onLockNote(String noteId, int position); // For setting PIN
-        void onUnlockNote(String noteId, int position); // For verifying PIN and unlocking
-        void onDeleteNoteFromFragment(String noteId, int position); // Matches your existing method name
-        void onAddToFolder(String noteId, int position);
+        void onRestoreNote(String noteId, int position);
+        void onPermanentlyDeleteNote(String noteId, int position);
+        void onLockNote(String noteId, int position);
+        void onUnlockNote(String noteId, int position);
+        void onMoveToBin(String noteId, int position);
+        void onAddToFolder(String noteId, String noteType, int position);
         void onRemoveFromFolder(String noteId, int position);
     }
 
-    // Corrected static factory method to match parameters sent from mainpage
-    public static NoteActionsDialogFragment newInstance(boolean isLocked, boolean isPinned, String noteId, int position, @Nullable String folderId) {
+    private NoteActionListener listener;
+
+    public static NoteActionsDialogFragment newInstance(boolean isLocked, boolean isPinned, boolean isDeleted,
+                                                        String noteId, int position, String folderId, String noteType) {
         NoteActionsDialogFragment fragment = new NoteActionsDialogFragment();
         Bundle args = new Bundle();
-        args.putString(ARG_NOTE_ID, noteId);
         args.putBoolean(ARG_IS_LOCKED, isLocked);
         args.putBoolean(ARG_IS_PINNED, isPinned);
+        args.putBoolean(ARG_IS_DELETED, isDeleted);
+        args.putString(ARG_NOTE_ID, noteId);
         args.putInt(ARG_POSITION, position);
         args.putString(ARG_FOLDER_ID, folderId);
+        args.putString(ARG_NOTE_TYPE, noteType);
         fragment.setArguments(args);
         return fragment;
     }
@@ -53,68 +64,77 @@ public class NoteActionsDialogFragment extends DialogFragment {
         super.onAttach(context);
         if (context instanceof NoteActionListener) {
             listener = (NoteActionListener) context;
+        } else if (getParentFragment() instanceof NoteActionListener) {
+            listener = (NoteActionListener) getParentFragment();
         } else {
-            throw new RuntimeException(context.toString() + " must implement NoteActionListener");
+            Log.e(TAG, "Host (Activity or Parent Fragment) must implement NoteActionsDialogFragment.NoteActionListener");
+            throw new RuntimeException(context.toString() + " or its parent Fragment must implement NoteActionsDialogFragment.NoteActionListener");
         }
     }
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         if (getArguments() != null) {
-            noteId = getArguments().getString(ARG_NOTE_ID);
             isLocked = getArguments().getBoolean(ARG_IS_LOCKED);
             isPinned = getArguments().getBoolean(ARG_IS_PINNED);
+            isDeleted = getArguments().getBoolean(ARG_IS_DELETED);
+            noteId = getArguments().getString(ARG_NOTE_ID);
             position = getArguments().getInt(ARG_POSITION);
-            folderId = getArguments().getString(ARG_FOLDER_ID); // Retrieve the folderId
+            folderId = getArguments().getString(ARG_FOLDER_ID);
+            noteType = getArguments().getString(ARG_NOTE_TYPE);
         }
-        setStyle(DialogFragment.STYLE_NO_FRAME, R.style.NoteActionDialogStyle);
+        setStyle(DialogFragment.STYLE_NORMAL, R.style.NoteActionDialogStyle);
     }
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        // Inflate the layout for this fragment's UI
         View view = inflater.inflate(R.layout.fragment, container, false);
 
-        // Find the TextViews for each action option
-        TextView deleteOption = view.findViewById(R.id.action_delete);
-        TextView lockUnlockOption = view.findViewById(R.id.action_lock_unlock);
-        // Only one TextView for folder actions now
-        TextView folderActionOption = view.findViewById(R.id.action_add_folder); // This will be reused
+        TextView actionDelete = view.findViewById(R.id.action_delete);
+        TextView actionLockUnlock = view.findViewById(R.id.action_lock_unlock);
+        TextView actionAddFolder = view.findViewById(R.id.action_add_folder);
+        TextView actionRestore = view.findViewById(R.id.action_restore);
+        TextView actionPermanentlyDelete = view.findViewById(R.id.action_permanently_delete);
 
-        // Set the text for the lock/unlock option based on the note's current lock status
-        lockUnlockOption.setText(isLocked ? "Unlock" : "Lock");
+        if (isDeleted) {
+            actionDelete.setVisibility(View.GONE);
+            actionLockUnlock.setVisibility(View.GONE);
+            actionAddFolder.setVisibility(View.GONE);
+            actionRestore.setVisibility(View.VISIBLE);
+            actionPermanentlyDelete.setVisibility(View.VISIBLE);
+        } else {
+            actionRestore.setVisibility(View.GONE);
+            actionPermanentlyDelete.setVisibility(View.GONE);
 
-        // Dynamic text and listener for the folder action option
-        if (folderId != null && !folderId.isEmpty()) { // If the note HAS a folder_id, it's in a folder
-            folderActionOption.setText("Remove from Folder"); // Change text
-            folderActionOption.setOnClickListener(v -> {
-                if (listener != null) {
-                    listener.onRemoveFromFolder(noteId, position); // Call remove function
-                }
-                dismiss(); // Dismiss the dialog after action
-            });
-        } else { // If folderId is null or empty, the note is on the main page (not in a folder)
-            folderActionOption.setText("Add to Folder"); // Set text to default
-            folderActionOption.setOnClickListener(v -> {
-                if (listener != null) {
-                    listener.onAddToFolder(noteId, position); // Call add function
-                }
-                dismiss(); // Dismiss the dialog after action
-            });
+            actionDelete.setText("Move to Bin");
+            actionDelete.setVisibility(View.VISIBLE);
+
+            actionLockUnlock.setText(isLocked ? "Unlock Note" : "Lock Note");
+            actionLockUnlock.setVisibility(View.VISIBLE);
+
+            if (folderId != null && !folderId.isEmpty()) {
+                actionAddFolder.setText("Remove from Folder");
+            } else {
+                actionAddFolder.setText("Add to Folder");
+            }
+            actionAddFolder.setVisibility(View.VISIBLE);
         }
 
-        // Set OnClickListeners for other action options
-        deleteOption.setOnClickListener(v -> {
+        actionDelete.setOnClickListener(v -> {
             if (listener != null) {
-                listener.onDeleteNoteFromFragment(noteId, position);
+                if (!isDeleted) {
+                    listener.onMoveToBin(noteId, position);
+                } else {
+                    Log.w(TAG, "Unexpected state: actionDelete clicked when isDeleted is true. Handled as MoveToBin.");
+                    listener.onMoveToBin(noteId, position);
+                }
             }
-            dismiss(); // Dismiss the dialog after action
+            dismiss();
         });
 
-        lockUnlockOption.setOnClickListener(v -> {
+        actionLockUnlock.setOnClickListener(v -> {
             if (listener != null) {
                 if (isLocked) {
                     listener.onUnlockNote(noteId, position);
@@ -122,7 +142,32 @@ public class NoteActionsDialogFragment extends DialogFragment {
                     listener.onLockNote(noteId, position);
                 }
             }
-            dismiss(); // Dismiss the dialog after action
+            dismiss();
+        });
+
+        actionAddFolder.setOnClickListener(v -> {
+            if (listener != null) {
+                if (folderId != null && !folderId.isEmpty()) {
+                    listener.onRemoveFromFolder(noteId, position);
+                } else {
+                    listener.onAddToFolder(noteId, noteType, position);
+                }
+            }
+            dismiss();
+        });
+
+        actionRestore.setOnClickListener(v -> {
+            if (listener != null) {
+                listener.onRestoreNote(noteId, position);
+            }
+            dismiss();
+        });
+
+        actionPermanentlyDelete.setOnClickListener(v -> {
+            if (listener != null) {
+                listener.onPermanentlyDeleteNote(noteId, position);
+            }
+            dismiss();
         });
 
         return view;

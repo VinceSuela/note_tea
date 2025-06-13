@@ -10,12 +10,14 @@
 
     <RelativeLayout
         android:id="@+id/header"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@drawable/rectangle6"
         android:layout_marginHorizontal="10dp"
         android:layout_marginTop="30dp"
         android:layout_centerHorizontal="true"
+        android:paddingVertical="10dp"
+        android:paddingHorizontal="10dp"
         >
 
         <ImageView
@@ -27,51 +29,56 @@
             app:srcCompat="@drawable/back"
             app:tint="#4D3131" />
 
-        <TextView
-            android:id="@+id/title"
+        <EditText
+            android:id="@+id/drawing_title_edittext"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
             android:layout_marginLeft="20dp"
             android:layout_toEndOf="@+id/exit"
+            android:hint="Drawing"
+            android:inputType="text"
+            android:textColorHint="#4D3131"
+            android:maxLines="1"
+            android:singleLine="true"
+            android:background="@null"
             android:textSize="30dp"
-            android:text="Draw"
             android:textStyle="bold"
+            android:textColor="#4D3131"
             />
 
         <ImageView
-            android:id="@+id/imageView11"
+            android:id="@+id/undo"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_alignParentRight="true"
             android:layout_centerVertical="true"
-            android:layout_marginRight="20dp"
-            app:tint="#4D3131"
-            app:srcCompat="@drawable/dotsettings" />
-
-        <ImageView
-            android:id="@+id/imageView16"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
             android:layout_marginRight="7dp"
             android:layout_marginTop="22dp"
-            android:layout_toStartOf="@+id/imageView17"
+            android:layout_toStartOf="@+id/redo"
             app:srcCompat="@drawable/undo" />
 
         <ImageView
-            android:id="@+id/imageView17"
+            android:id="@+id/redo"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
             android:layout_marginTop="22dp"
-            android:layout_marginRight="10dp"
-            android:layout_toStartOf="@+id/imageView11"
+            android:layout_marginRight="20dp"
+            android:layout_alignParentEnd="true"
             app:srcCompat="@drawable/redo" />
 
     </RelativeLayout>
 
+    <FrameLayout
+        android:id="@+id/drawing_pad_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/header"
+        android:layout_above="@+id/footer_tools"
+        android:background="@android:color/white"> </FrameLayout>
 
     <LinearLayout
-        android:id="@+id/footer"
+        android:id="@+id/footer_tools"
         android:layout_width="match_parent"
         android:layout_height="60dp"
         android:layout_alignParentBottom="true"
@@ -79,50 +86,73 @@
         android:layout_marginHorizontal="30dp"
         android:orientation="horizontal"
         android:layout_marginBottom="25dp"
-        >
-
+        android:gravity="center_vertical" >
 
         <ImageView
-            android:id="@+id/imageView18"
-            android:layout_width="35dp"
+            android:id="@+id/eraser"
+            android:layout_width="0dp"
             android:layout_height="35dp"
             android:layout_weight="1"
-            android:layout_marginTop="13dp"
-            app:srcCompat="@drawable/eraser" />
+            android:padding="5dp" app:srcCompat="@drawable/eraser" />
 
         <ImageView
-            android:id="@+id/imageView19"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
+            android:id="@+id/pencil"
+            android:layout_width="0dp"
+            android:layout_height="35dp"
             android:layout_weight="1"
-            android:layout_marginTop="16dp"
+            android:padding="5dp"
             app:srcCompat="@drawable/pencil2" />
 
         <ImageView
-            android:id="@+id/imageView20"
-            android:layout_width="27dp"
-            android:layout_height="27dp"
+            android:id="@+id/pen"
+            android:layout_width="0dp"
+            android:layout_height="35dp"
             android:layout_weight="1"
-            android:layout_marginTop="17dp"
+            android:padding="5dp"
             app:srcCompat="@drawable/pen" />
 
         <ImageView
-            android:id="@+id/imageView21"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
+            android:id="@+id/marker"
+            android:layout_width="0dp"
+            android:layout_height="35dp"
             android:layout_weight="1"
-            android:layout_marginTop="18dp"
+            android:padding="5dp"
             app:srcCompat="@drawable/marker" />
 
-        <ImageView
-            android:id="@+id/imageView22"
-            android:layout_width="35dp"
-            android:layout_height="35dp"
-            android:layout_marginTop="13dp"
+        <RelativeLayout
+            android:layout_width="0dp"
+            android:layout_height="40dp"
             android:layout_weight="1"
-            app:srcCompat="@drawable/radio" />
+            >
+
+            <ImageView
+                android:id="@+id/back"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:padding="1dp"
+                android:src="@drawable/circle"
+                />
+            <ImageView
+                android:id="@+id/color_picker_button"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:padding="3dp"
+                android:src="@drawable/circle"
+                />
+
+        </RelativeLayout>
+
 
     </LinearLayout>
 
+    <ImageView
+        android:id="@+id/save_drawing_button"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_alignParentEnd="true"
+        android:layout_above="@id/footer_tools"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="15dp"
+        android:src="@drawable/checked"  />
 
 </RelativeLayout>

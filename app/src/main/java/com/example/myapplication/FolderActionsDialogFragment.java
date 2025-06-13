@@ -1,4 +1,4 @@
-package com.example.myapplication; // Make sure this matches your package name
+package com.example.myapplication;
 
 import android.content.Context;
 import android.os.Bundle;
@@ -10,7 +10,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.DialogFragment;
 
-// Interface for communication with the hosting Activity (e.g., FoldersActivity)
 public class FolderActionsDialogFragment extends DialogFragment {
 
     private static final String ARG_FOLDER_ID = "folderId";
@@ -25,7 +24,6 @@ public class FolderActionsDialogFragment extends DialogFragment {
         void onDeleteFolder(String folderId);
     }
 
-    // Static factory method to create an instance with arguments
     public static FolderActionsDialogFragment newInstance(String folderId, String folderName) {
         FolderActionsDialogFragment fragment = new FolderActionsDialogFragment();
         Bundle args = new Bundle();
@@ -52,35 +50,30 @@ public class FolderActionsDialogFragment extends DialogFragment {
             folderId = getArguments().getString(ARG_FOLDER_ID);
             folderName = getArguments().getString(ARG_FOLDER_NAME);
         }
-        // Use a custom style to remove default dialog background and rely on your CardView
-        // We set STYLE_NO_FRAME and a transparent background here.
         setStyle(DialogFragment.STYLE_NO_FRAME, R.style.FolderActionDialogStyle);
     }
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        // Inflate your custom layout: folderfragment.xml
         View view = inflater.inflate(R.layout.folderfragment, container, false);
 
-        // Find your TextViews from folderfragment.xml
         TextView renameOption = view.findViewById(R.id.renamefolder);
         TextView deleteOption = view.findViewById(R.id.deletefolder);
-        TextView dialogTitle = view.findViewById(R.id.option); // This is your "Folder Options" TextView
+        TextView dialogTitle = view.findViewById(R.id.option);
 
-        // Set click listeners for the options
         renameOption.setOnClickListener(v -> {
             if (listener != null) {
                 listener.onRenameFolder(folderId, folderName);
             }
-            dismiss(); // Dismiss the dialog after action
+            dismiss();
         });
 
         deleteOption.setOnClickListener(v -> {
             if (listener != null) {
                 listener.onDeleteFolder(folderId);
             }
-            dismiss(); // Dismiss the dialog after action
+            dismiss();
         });
 
         return view;

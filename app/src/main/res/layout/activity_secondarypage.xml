@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#E0C8C8"
-    tools:context=".mainpage">
+    tools:context=".secondarypage">
 
 
 
@@ -132,7 +132,7 @@
         android:layout_below="@+id/searchnote"
         android:textSize="23dp"
         android:textColor="#594444"
-        android:text="Your Notes"
+        android:text="Miscellaneous Notes"
         android:textStyle="bold"
         />
 
@@ -439,7 +439,6 @@
         </RelativeLayout>
 
     </LinearLayout>
-
 
 
 

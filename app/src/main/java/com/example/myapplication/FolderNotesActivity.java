@@ -1,4 +1,3 @@
-// com.example.myapplication/FolderNotesActivity.java
 package com.example.myapplication;
 
 import android.app.AlertDialog;
@@ -15,14 +14,17 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar; // Import Toolbar
+import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.DocumentChange;
+import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
@@ -33,34 +35,40 @@ import com.google.firebase.firestore.QuerySnapshot;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class FolderNotesActivity extends AppCompatActivity
-        implements rv_onClick, NoteActionsDialogFragment.NoteActionListener { // Implement these interfaces
+        implements rv_onClick, NoteActionsDialogFragment.NoteActionListener {
 
     private static final String TAG = "FolderNotesActivity";
     private RecyclerView notesRecyclerView;
-    private myadapter noteAdapter; // Reuse your existing note adapter
+    private CombinedNotesAdapter noteAdapter;
     private ArrayList<note> notesModels;
     private FirebaseFirestore db;
     private FirebaseAuth auth;
     private FirebaseUser user;
     private String uid;
     private DocumentReference userRef;
-    private ListenerRegistration noteListenerRegistration;
+    private ListenerRegistration textNoteListenerRegistration;
+    private ListenerRegistration miscNoteListenerRegistration;
     private ProgressDialog progressDialog;
 
-    private String folderId; // To store the ID of the current folder
-    private String folderName; // To store the name of the current folder
+    private String folderId;
+    private String folderName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_folder_notes);
 
-        // Get folder ID and name from the Intent
         Intent intent = getIntent();
         if (intent != null) {
             folderId = intent.getStringExtra("folder_id");
@@ -69,19 +77,17 @@ public class FolderNotesActivity extends AppCompatActivity
 
         if (folderId == null || folderName == null) {
             Toast.makeText(this, "Folder not specified.", Toast.LENGTH_SHORT).show();
-            finish(); // Close activity if no folder info
+            finish();
             return;
         }
 
-        // Setup Toolbar
         Toolbar toolbar = findViewById(R.id.toolbar_folder_notes);
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
-            getSupportActionBar().setTitle(folderName); // Set toolbar title to folder name
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true); // Show back button
+            getSupportActionBar().setTitle(folderName);
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }
 
-        // Firebase Initialization
         db = FirebaseFirestore.getInstance();
         auth = FirebaseAuth.getInstance();
         user = auth.getCurrentUser();
@@ -95,111 +101,176 @@ public class FolderNotesActivity extends AppCompatActivity
         uid = user.getUid();
         userRef = db.collection("users").document(uid);
 
-        // Progress Dialog
         progressDialog = new ProgressDialog(this);
         progressDialog.setCancelable(false);
         progressDialog.setMessage("Loading notes...");
-        progressDialog.show();
 
-        // RecyclerView Setup
         notesRecyclerView = findViewById(R.id.folder_notes_recycler_view);
         notesRecyclerView.setHasFixedSize(true);
         notesRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         notesModels = new ArrayList<>();
-        noteAdapter = new myadapter(FolderNotesActivity.this, notesModels, this); // 'this' for rv_onClick
+
+        noteAdapter = new CombinedNotesAdapter(FolderNotesActivity.this, notesModels, this);
         notesRecyclerView.setAdapter(noteAdapter);
         notesRecyclerView.setItemAnimator(null);
 
-        listenForFolderNotes(); // Start listening for notes in this folder
+        if (!progressDialog.isShowing()) {
+            progressDialog.show();
+        }
+
+        listenForFolderNotes();
     }
 
-    // Handle back button on toolbar
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (item.getItemId() == android.R.id.home) {
-            onBackPressed(); // Go back to previous activity (FoldersActivity)
+            onBackPressed();
             return true;
         }
         return super.onOptionsItemSelected(item);
     }
 
     private void listenForFolderNotes() {
-        if (uid == null || folderId == null) {
-            return; // Should not happen if initial checks are done
+        if (userRef == null || folderId == null) {
+            Log.e(TAG, "UserRef or folderId is null, cannot set up Firestore listener.");
+            if (progressDialog.isShowing()) progressDialog.dismiss();
+            return;
         }
 
-        noteListenerRegistration = userRef.collection("notes")
-                .whereEqualTo("folder_id", folderId) // Crucial: Filter by folderId
-                .orderBy("isPinned", Query.Direction.DESCENDING) // Still order them if desired
-                .orderBy("note_date", Query.Direction.DESCENDING)
-                .addSnapshotListener(new EventListener<QuerySnapshot>() {
-                    @Override
-                    public void onEvent(@Nullable QuerySnapshot value, @Nullable FirebaseFirestoreException error) {
-                        if (progressDialog.isShowing())
-                            progressDialog.dismiss();
+        Query textNotesQuery = userRef.collection("notes")
+                .whereEqualTo("folder_id", folderId)
+                .whereEqualTo("isDeleted", false);
 
-                        if (error != null) {
-                            Toast.makeText(FolderNotesActivity.this, "Error loading notes: " + error.getMessage(), Toast.LENGTH_SHORT).show();
-                            Log.e("FolderNotesActivity", "Firestore error", error);
-                            return;
-                        }
+        textNoteListenerRegistration = textNotesQuery.addSnapshotListener(new EventListener<QuerySnapshot>() {
+            @Override
+            public void onEvent(@Nullable QuerySnapshot value, @Nullable FirebaseFirestoreException error) {
+                if (error != null) {
+                    Log.e(TAG, "Firestore error for text notes in folder: ", error);
+                    return;
+                }
+                if (value == null) {
+                    Log.d(TAG, "Received null QuerySnapshot for text notes in folder.");
+                    return;
+                }
+                Log.d(TAG, "Text notes in folder updated. Re-fetching all notes.");
+                fetchAllFolderNotes();
+            }
+        });
 
-                        if (value == null) {
-                            return;
-                        }
+        Query miscNotesQuery = userRef.collection("miscellaneous_notes")
+                .whereEqualTo("folder_id", folderId)
+                .whereEqualTo("isDeleted", false);
 
-                        for (DocumentChange dc : value.getDocumentChanges()) {
-                            note changedNote = dc.getDocument().toObject(note.class);
-                            changedNote.setNote_id(dc.getDocument().getId()); // Ensure ID is set
+        miscNoteListenerRegistration = miscNotesQuery.addSnapshotListener(new EventListener<QuerySnapshot>() {
+            @Override
+            public void onEvent(@Nullable QuerySnapshot value, @Nullable FirebaseFirestoreException error) {
+                if (error != null) {
+                    Log.e(TAG, "Firestore error for miscellaneous notes in folder: ", error);
+                    return;
+                }
+                if (value == null) {
+                    Log.d(TAG, "Received null QuerySnapshot for miscellaneous notes in folder.");
+                    return;
+                }
+                Log.d(TAG, "Miscellaneous notes in folder updated. Re-fetching all notes.");
+                fetchAllFolderNotes();
+            }
+        });
+    }
 
-                            int oldIndex = dc.getOldIndex();
-                            int newIndex = dc.getNewIndex();
+    private void fetchAllFolderNotes() {
+        if (userRef == null || folderId == null) {
+            Log.e(TAG, "userRef or folderId is null in fetchAllFolderNotes.");
+            if (progressDialog.isShowing()) progressDialog.dismiss();
+            return;
+        }
 
-                            switch (dc.getType()) {
-                                case ADDED:
-                                    notesModels.add(newIndex, changedNote);
-                                    noteAdapter.notifyItemInserted(newIndex);
-                                    break;
-                                case MODIFIED:
-                                    if (oldIndex == newIndex) {
-                                        notesModels.set(oldIndex, changedNote);
-                                        noteAdapter.notifyItemChanged(oldIndex);
-                                    } else {
-                                        notesModels.remove(oldIndex);
-                                        notesModels.add(newIndex, changedNote);
-                                        noteAdapter.notifyItemMoved(oldIndex, newIndex);
-                                        noteAdapter.notifyItemChanged(newIndex);
-                                    }
-                                    break;
-                                case REMOVED:
-                                    notesModels.remove(oldIndex);
-                                    noteAdapter.notifyItemRemoved(oldIndex);
-                                    break;
-                            }
-                        }
-                        // It's generally better to use specific notify methods, but for initial setup,
-                        // if you face issues, notifyDataSetChanged() can be a fallback.
-                        // noteAdapter.notifyDataSetChanged();
+        Task<QuerySnapshot> textNotesTask = userRef.collection("notes")
+                .whereEqualTo("folder_id", folderId)
+                .whereEqualTo("isDeleted", false)
+                .get();
+
+        Task<QuerySnapshot> miscNotesTask = userRef.collection("miscellaneous_notes")
+                .whereEqualTo("folder_id", folderId)
+                .whereEqualTo("isDeleted", false)
+                .get();
+
+        Tasks.whenAllSuccess(textNotesTask, miscNotesTask)
+                .addOnSuccessListener(results -> {
+                    if (progressDialog.isShowing()) {
+                        progressDialog.dismiss();
                     }
+
+                    QuerySnapshot textNotesSnapshot = (QuerySnapshot) results.get(0);
+                    QuerySnapshot miscNotesSnapshot = (QuerySnapshot) results.get(1);
+
+                    notesModels.clear();
+
+                    for (DocumentSnapshot doc : textNotesSnapshot.getDocuments()) {
+                        note noteItem = doc.toObject(note.class);
+                        if (noteItem != null) {
+                            noteItem.setNote_id(doc.getId());
+                            if (noteItem.getType() == null) noteItem.setType("text");
+                            notesModels.add(noteItem);
+                        }
+                    }
+
+
+                    for (DocumentSnapshot doc : miscNotesSnapshot.getDocuments()) {
+                        note noteItem = doc.toObject(note.class);
+                        if (noteItem != null) {
+                            noteItem.setNote_id(doc.getId());
+                            notesModels.add(noteItem);
+                        }
+                    }
+
+                    Collections.sort(notesModels, new Comparator<note>() {
+                        @Override
+                        public int compare(note n1, note n2) {
+
+                            int pinnedCompare = Boolean.compare(n2.getIsPinned(), n1.getIsPinned());
+                            if (pinnedCompare != 0) {
+                                return pinnedCompare;
+                            }
+                            if (n1.getTimestamp() == null && n2.getTimestamp() == null) return 0;
+                            if (n1.getTimestamp() == null) return 1; // Null timestamps go last
+                            if (n2.getTimestamp() == null) return -1;
+                            return n2.getTimestamp().compareTo(n1.getTimestamp());
+                        }
+                    });
+
+                    noteAdapter.notifyDataSetChanged();
+                    Log.d(TAG, "All folder notes fetched and sorted. Total: " + notesModels.size());
+                })
+                .addOnFailureListener(e -> {
+                    if (progressDialog.isShowing()) {
+                        progressDialog.dismiss();
+                    }
+                    Toast.makeText(FolderNotesActivity.this, "Failed to load notes for folder: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "Error fetching notes from both collections for folder: ", e);
                 });
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (noteListenerRegistration != null) {
-            noteListenerRegistration.remove(); // Detach listener
+
+        if (textNoteListenerRegistration != null) {
+            textNoteListenerRegistration.remove();
+        }
+        if (miscNoteListenerRegistration != null) {
+            miscNoteListenerRegistration.remove();
         }
         if (progressDialog != null && progressDialog.isShowing()) {
             progressDialog.dismiss();
         }
     }
 
-    // --- rv_onClick Implementations (reusing mainpage logic) ---
     @Override
     public void onItemClicked(note note) {
-        if (note.getIsLocked()) { // Use isLocked() getter
-            showVerifyPinDialog(note.getNote_id(), notesModels.indexOf(note), true); // true = opening note
+
+        if (note.getIsLocked()) {
+            showVerifyPinDialog(note.getNote_id(), notesModels.indexOf(note), true, note.getType());
         } else {
             openNoteForEditing(note);
         }
@@ -210,20 +281,24 @@ public class FolderNotesActivity extends AppCompatActivity
         if (position != RecyclerView.NO_POSITION) {
             note noteToUpdate = notesModels.get(position);
             String documentId = noteToUpdate.getNote_id();
+            String noteType = noteToUpdate.getType();
 
-            if (documentId != null && !documentId.isEmpty()) {
+            if (documentId != null && !documentId.isEmpty() && noteType != null) {
                 boolean newPinnedStatus = !currentPinnedStatus;
                 Map<String, Object> updates = new HashMap<>();
                 updates.put("isPinned", newPinnedStatus);
-
-                userRef.collection("notes").document(documentId).update(updates)
-                        .addOnSuccessListener(aVoid -> {}) // No toast needed, UI updates via listener
+                updates.put("timestamp", new Date());
+                getNoteCollectionRef(noteType).document(documentId).update(updates)
+                        .addOnSuccessListener(aVoid -> {
+                            Toast.makeText(FolderNotesActivity.this, "Note pinned status updated!", Toast.LENGTH_SHORT).show();
+                        })
                         .addOnFailureListener(e -> {
                             Toast.makeText(FolderNotesActivity.this, "Error toggling pin status: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                            Log.e("FolderNotesActivity", "Error toggling pin status", e);
+                            Log.e(TAG, "Error toggling pin status for note ID: " + documentId, e);
                         });
             } else {
-                Toast.makeText(FolderNotesActivity.this, "Error: Note ID missing for pin toggle.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(FolderNotesActivity.this, "Error: Note ID or type missing for pin toggle.", Toast.LENGTH_SHORT).show();
+                Log.e(TAG, "Note ID or type was null/empty for pin toggle at position: " + position);
             }
         }
     }
@@ -248,58 +323,79 @@ public class FolderNotesActivity extends AppCompatActivity
         note selectedNote = notesModels.get(position);
         if (selectedNote == null) {
             Log.e(TAG, "onNoteLongClick: selectedNote object at position " + position + " is NULL!");
-            // This can happen if your Firestore conversion (toObject) failed or returned null
             return;
         }
 
         Log.d(TAG, "onNoteLongClick: Selected Note ID: " + selectedNote.getNote_id() +
                 ", Locked: " + selectedNote.getIsLocked() +
-                ", Pinned: " + selectedNote.getIsPinned());
+                ", Pinned: " + selectedNote.getIsPinned() +
+                ", Deleted: " + selectedNote.getIsDeleted() +
+                ", Folder ID: " + selectedNote.getFolder_id() +
+                ", Type: " + selectedNote.getType());
 
         NoteActionsDialogFragment fragment = NoteActionsDialogFragment.newInstance(
                 selectedNote.getIsLocked(),
                 selectedNote.getIsPinned(),
+                selectedNote.getIsDeleted(),
                 selectedNote.getNote_id(),
                 position,
-                selectedNote.getFolder_id()
+                selectedNote.getFolder_id(),
+                selectedNote.getType()
         );
         fragment.show(getSupportFragmentManager(), "NoteActionsDialogFragment");
     }
 
     @Override
     public void onDeleteClick(int position) {
-        if (position != RecyclerView.NO_POSITION) {
+        String currentTime = new SimpleDateFormat("dd-MM-yyyy HH:mm", Locale.getDefault()).format(new Date()).toString();
+        if (position != RecyclerView.NO_POSITION && position < notesModels.size()) {
             new AlertDialog.Builder(this)
-                    .setTitle("Delete Note")
-                    .setMessage("Are you sure you want to delete this note permanently?")
-                    .setPositiveButton("Delete", new DialogInterface.OnClickListener() {
+                    .setTitle("Move Note to Bin")
+                    .setMessage("Are you sure you want to move this note to the bin?")
+                    .setPositiveButton("Move to Bin", new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int which) {
                             note noteToDelete = notesModels.get(position);
                             String documentId = noteToDelete.getNote_id();
+                            String noteType = noteToDelete.getType();
 
-                            if (documentId != null && !documentId.isEmpty()) {
-                                userRef.collection("notes").document(documentId)
-                                        .delete()
-                                        .addOnSuccessListener(aVoid -> {
-                                            Toast.makeText(FolderNotesActivity.this, "Note deleted successfully!", Toast.LENGTH_SHORT).show();
-                                        })
-                                        .addOnFailureListener(e -> {
-                                            Toast.makeText(FolderNotesActivity.this, "Error deleting note: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                                            Log.e("FolderNotesActivity", "Error deleting note", e);
-                                        });
+                            if (documentId != null && !documentId.isEmpty() && noteType != null) {
+                                FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+                                if (currentUser != null) {
+                                    Map<String, Object> updates = new HashMap<>();
+                                    updates.put("isDeleted", true);
+                                    updates.put("deleted_date", currentTime);
+                                    updates.put("folder_id", null);
+                                    updates.put("timestamp", new Date());
+
+                                    getNoteCollectionRef(noteType)
+                                            .document(documentId)
+                                            .update(updates)
+                                            .addOnSuccessListener(aVoid -> {
+                                                Toast.makeText(FolderNotesActivity.this, "Note moved to bin!", Toast.LENGTH_SHORT).show();
+
+                                            })
+                                            .addOnFailureListener(e -> {
+                                                Toast.makeText(FolderNotesActivity.this, "Error moving note to bin: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                                                Log.e(TAG, "Error moving note to bin", e);
+                                            });
+                                } else {
+                                    Toast.makeText(FolderNotesActivity.this, "User not authenticated for deletion.", Toast.LENGTH_SHORT).show();
+                                }
                             } else {
-                                Toast.makeText(FolderNotesActivity.this, "Note ID is missing, cannot delete.", Toast.LENGTH_SHORT).show();
-                                Log.e("FolderNotesActivity", "Note ID was null or empty for deletion at position: " + position);
+                                Toast.makeText(FolderNotesActivity.this, "Note ID or type is missing, cannot move to bin.", Toast.LENGTH_SHORT).show();
+                                Log.e(TAG, "Note ID or type was null or empty for moving to bin at position: " + position);
                             }
                         }
                     })
                     .setNegativeButton(android.R.string.cancel, null)
-                    .setIcon(android.R.drawable.ic_dialog_alert)
+                    .setIcon(android.R.drawable.ic_menu_delete)
                     .show();
+        } else {
+            Toast.makeText(this, "Error: Invalid note position for action.", Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "Attempted action on note at invalid position: " + position);
         }
     }
 
-    // --- NoteActionsDialogFragment.NoteActionListener Implementations (reusing mainpage logic) ---
     @Override
     public void onLockNote(String noteId, int position) {
         showSetPinDialog(noteId, position);
@@ -307,17 +403,28 @@ public class FolderNotesActivity extends AppCompatActivity
 
     @Override
     public void onUnlockNote(String noteId, int position) {
-        showVerifyPinDialog(noteId, position, false); // false = unlocking operation
+        showVerifyPinDialog(noteId, position, false, notesModels.get(position).getType());
     }
 
     @Override
-    public void onDeleteNoteFromFragment(String noteId, int position) {
-        onDeleteClick(position); // Reuse existing delete logic
+    public void onMoveToBin(String noteId, int position) {
+        onDeleteClick(position);
+    }
+
+    @Override
+    public void onAddToFolder(String noteId, String noteType, int position) {
+        Toast.makeText(this, "Note is already in a folder. Use 'Remove from Folder' first if moving.", Toast.LENGTH_LONG).show();
+
     }
 
     @Override
     public void onAddToFolder(String noteId, int position) {
-
+        if (position != RecyclerView.NO_POSITION && position < notesModels.size()) {
+            note selectedNote = notesModels.get(position);
+            onAddToFolder(noteId, selectedNote.getType(), position);
+        } else {
+            Toast.makeText(this, "Error: Invalid note position for action.", Toast.LENGTH_SHORT).show();
+        }
     }
 
     @Override
@@ -327,21 +434,21 @@ public class FolderNotesActivity extends AppCompatActivity
                 .setMessage("Are you sure you want to remove this note from '" + folderName + "' and show it on the main page?")
                 .setPositiveButton("Remove", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
-                        Map<String, Object> updates = new HashMap<>();
-                        updates.put("folder_id", null); // <--- This is the key: set folder_id to null
+                        note noteToRemove = notesModels.get(position);
+                        String noteType = noteToRemove.getType();
 
-                        // Assuming userRef is correctly initialized in FolderNotesActivity
-                        db.collection("users").document(uid).collection("notes").document(noteId)
+                        Map<String, Object> updates = new HashMap<>();
+                        updates.put("folder_id", null);
+                        updates.put("timestamp", new Date());
+
+                        getNoteCollectionRef(noteType).document(noteId)
                                 .update(updates)
                                 .addOnSuccessListener(aVoid -> {
-                                    Toast.makeText(FolderNotesActivity.this, "Note removed from folder and moved to main page!", Toast.LENGTH_SHORT).show();
-                                    // The SnapshotListener in FolderNotesActivity (which filters by currentFolderId)
-                                    // will automatically detect this change and remove the note from its RecyclerView.
-                                    // The SnapshotListener in mainpage will detect it and add it to its RecyclerView.
+                                    Toast.makeText(FolderNotesActivity.this, "Note removed from folder!", Toast.LENGTH_SHORT).show();
                                 })
                                 .addOnFailureListener(e -> {
                                     Toast.makeText(FolderNotesActivity.this, "Error removing note from folder: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                                    Log.e("FolderNotesActivity", "Error removing note from folder", e);
+                                    Log.e(TAG, "Error removing note from folder", e);
                                 });
                     }
                 })
@@ -350,16 +457,51 @@ public class FolderNotesActivity extends AppCompatActivity
                 .show();
     }
 
+    @Override
+    public void onRestoreNote(String noteId, String noteType) {
+        Toast.makeText(this, "This note is not in the bin.", Toast.LENGTH_SHORT).show();
+    }
 
-    // --- Helper Methods for PINs and Notes (Copy these directly from mainpage.java) ---
-    // Ensure you copy hashPin, showSetPinDialog, showVerifyPinDialog, updateNoteLockStatus, openNoteForEditing
-    // You might want to make these static utility methods in a separate class later to avoid duplication.
+    @Override
+    public void onPermanentlyDeleteNote(String noteId, String noteType) {
+        new AlertDialog.Builder(this)
+                .setTitle("Permanently Delete Note")
+                .setMessage("This note will be permanently deleted and cannot be recovered. Are you sure?")
+                .setPositiveButton("Delete Permanently", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        getNoteCollectionRef(noteType).document(noteId)
+                                .delete()
+                                .addOnSuccessListener(aVoid -> {
+                                    Toast.makeText(FolderNotesActivity.this, "Note permanently deleted!", Toast.LENGTH_SHORT).show();
+                                })
+                                .addOnFailureListener(e -> {
+                                    Toast.makeText(FolderNotesActivity.this, "Error deleting note permanently: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                                    Log.e(TAG, "Error permanently deleting note", e);
+                                });
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .setIcon(android.R.drawable.ic_dialog_alert)
+                .show();
+    }
 
-    /**
-     * Hashes the given PIN using SHA-256.
-     * @param pin The plain text PIN.
-     * @return The SHA-256 hash as a hexadecimal string, or null if hashing fails.
-     */
+
+    @Override
+    public void onRestoreNote(String noteId, int position) {
+        Toast.makeText(this, "This note is not in the bin.", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onPermanentlyDeleteNote(String noteId, int position) {
+        if (position != RecyclerView.NO_POSITION && position < notesModels.size()) {
+            note noteToDelete = notesModels.get(position);
+            String noteType = noteToDelete.getType();
+            onPermanentlyDeleteNote(noteId, noteType);
+        } else {
+            Toast.makeText(this, "Error: Invalid note position for action.", Toast.LENGTH_SHORT).show();
+        }
+    }
+
     private String hashPin(String pin) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
@@ -371,17 +513,13 @@ public class FolderNotesActivity extends AppCompatActivity
             }
             return hashtext;
         } catch (NoSuchAlgorithmException e) {
-            Log.e("Hashing", "SHA-256 algorithm not found", e);
+            Log.e(TAG, "SHA-256 algorithm not found", e);
             Toast.makeText(this, "Hashing error, cannot secure note.", Toast.LENGTH_SHORT).show();
             return null;
         }
     }
 
-    /**
-     * Shows a dialog to the user to set a new PIN for a note.
-     * @param noteId The ID of the note to lock.
-     * @param position The position of the note in the RecyclerView.
-     */
+
     private void showSetPinDialog(String noteId, int position) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Set PIN for Note");
@@ -395,25 +533,19 @@ public class FolderNotesActivity extends AppCompatActivity
             String pin = input.getText().toString().trim();
             if (pin.length() != 4 || !pin.matches("\\d{4}")) {
                 Toast.makeText(this, "PIN must be exactly 4 digits.", Toast.LENGTH_SHORT).show();
-                // Optionally re-show dialog, or guide user better
                 return;
             }
             String hashedPin = hashPin(pin);
             if (hashedPin != null) {
-                updateNoteLockStatus(noteId, position, true, hashedPin); // Lock with the new hashed PIN
+                note noteToUpdate = notesModels.get(position); // Get note to retrieve its type
+                updateNoteLockStatus(noteId, position, true, hashedPin, noteToUpdate.getType());
             }
         });
         builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
         builder.show();
     }
 
-    /**
-     * Shows a dialog to the user to verify a PIN for a note.
-     * @param noteId The ID of the note to verify PIN for.
-     * @param position The position of the note in the RecyclerView.
-     * @param openingNote True if the purpose is to open the note, false if to unlock it.
-     */
-    private void showVerifyPinDialog(String noteId, int position, boolean openingNote) {
+    private void showVerifyPinDialog(String noteId, int position, boolean openingNote, @Nullable String noteType) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Enter PIN to " + (openingNote ? "Open" : "Unlock") + " Note");
 
@@ -426,13 +558,30 @@ public class FolderNotesActivity extends AppCompatActivity
             String enteredPin = input.getText().toString().trim();
             String hashedEnteredPin = hashPin(enteredPin);
 
-            note noteToVerify = notesModels.get(position); // Get the note object from the current list
+            note noteToVerify = notesModels.get(position);
             if (hashedEnteredPin != null && hashedEnteredPin.equals(noteToVerify.getHashedPin())) {
                 Toast.makeText(this, "PIN correct!", Toast.LENGTH_SHORT).show();
+
                 if (openingNote) {
-                    openNoteForEditing(noteToVerify);
+
+                    note tempNoteForOpening = new note(
+                            noteToVerify.getImageUrl(),
+                            noteToVerify.getType(),
+                            noteToVerify.getFolder_id(),
+                            noteToVerify.getDeleted_date(),
+                            null,
+                            noteToVerify.getIsDeleted(),
+                            false,
+                            noteToVerify.getIsPinned(),
+                            noteToVerify.getNote_content(),
+                            noteToVerify.getNote_date(),
+                            noteToVerify.getNote_id(),
+                            noteToVerify.getNote_title(),
+                            noteToVerify.getTimestamp()
+                    );
+                    openNoteForEditing(tempNoteForOpening);
                 } else {
-                    updateNoteLockStatus(noteId, position, false, null); // Unlock and remove hashed PIN
+                    updateNoteLockStatus(noteId, position, false, null, noteToVerify.getType());
                 }
             } else {
                 Toast.makeText(this, "Incorrect PIN.", Toast.LENGTH_SHORT).show();
@@ -442,42 +591,90 @@ public class FolderNotesActivity extends AppCompatActivity
         builder.show();
     }
 
-    /**
-     * Updates the lock status and hashed PIN of a note in Firestore.
-     * @param noteId The ID of the note document.
-     * @param position The position of the note in the RecyclerView (for local notesModels access).
-     * @param lockedStatus The new locked status (true to lock, false to unlock).
-     * @param hashedPin The hashed PIN (null if unlocking).
-     */
-    private void updateNoteLockStatus(String noteId, int position, boolean lockedStatus, String hashedPin) {
+    private void updateNoteLockStatus(String noteId, int position, boolean lockedStatus, String hashedPin, String noteType) {
+        if (noteType == null) {
+            Log.e(TAG, "noteType is null in updateNoteLockStatus. Cannot update note.");
+            Toast.makeText(this, "Error: Note type missing for lock update.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         Map<String, Object> updates = new HashMap<>();
         updates.put("isLocked", lockedStatus);
         updates.put("hashedPin", hashedPin);
+        updates.put("timestamp", new Date());
 
-        userRef.collection("notes").document(noteId).update(updates)
+        getNoteCollectionRef(noteType).document(noteId).update(updates)
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(FolderNotesActivity.this, "Note " + (lockedStatus ? "locked" : "unlocked") + "!", Toast.LENGTH_SHORT).show();
                 })
                 .addOnFailureListener(e -> {
                     Toast.makeText(FolderNotesActivity.this, "Failed to update lock status: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                    Log.e("FolderNotesActivity", "Error updating note lock status", e);
+                    Log.e(TAG, "Error updating note lock status", e);
                 });
     }
 
-    /**
-     * Launches textnoteedit activity to open a note for editing.
-     * @param note The note object to open.
-     */
     private void openNoteForEditing(note note) {
-        Intent intent = new Intent(FolderNotesActivity.this, textnoteedit.class);
-        intent.putExtra("key", note.getNote_id());
-        intent.putExtra("key1", note.getNote_title());
-        intent.putExtra("key2", note.getNote_content());
-        intent.putExtra("key3", note.getIsPinned());
-        intent.putExtra("key4", note.getIsLocked());
-        intent.putExtra("key5", note.getHashedPin());
-        intent.putExtra("key6", note.getFolder_id());
+        String noteType = note.getType();
+        if (noteType == null) {
+            Log.w(TAG, "openNoteForEditing: Note type is null for note ID: " + note.getNote_id());
+            Toast.makeText(this, "Cannot open: Note type is undefined.", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
-        startActivity(intent);
+        if ("text".equals(noteType)) {
+            Intent intent = new Intent(FolderNotesActivity.this, textnoteedit.class);
+            intent.putExtra("key", note.getNote_id());
+            intent.putExtra("key1", note.getNote_title());
+            intent.putExtra("key2", note.getNote_content());
+            intent.putExtra("key3", note.getIsPinned());
+            intent.putExtra("key4", note.getIsLocked());
+            intent.putExtra("key5", note.getHashedPin());
+            intent.putExtra("key6", note.getFolder_id());
+            intent.putExtra("key7", note.getIsDeleted());
+            intent.putExtra("key8", note.getDeleted_date());
+            startActivity(intent);
+        } else if ("drawing".equals(noteType)) {
+            Intent intent = new Intent(FolderNotesActivity.this, drawingpageedit.class);
+            intent.putExtra("note_id", note.getNote_id());
+            intent.putExtra("note_title", note.getNote_title());
+            intent.putExtra("base64Image", note.getImageUrl());
+            intent.putExtra("isPinned", note.getIsPinned());
+            intent.putExtra("isLocked", note.getIsLocked());
+            intent.putExtra("hashedPin", note.getHashedPin());
+            intent.putExtra("folder_id", note.getFolder_id());
+            intent.putExtra("isDeleted", note.getIsDeleted());
+            intent.putExtra("deleted_date", note.getDeleted_date());
+            startActivity(intent);
+        } else if ("list".equals(noteType)) {
+            Intent intent = new Intent(FolderNotesActivity.this, todolistpage.class);
+            intent.putExtra("note_id", note.getNote_id());
+            intent.putExtra("note_title", note.getNote_title());
+            intent.putExtra("isPinned", note.getIsPinned());
+            intent.putExtra("isLocked", note.getIsLocked());
+            intent.putExtra("hashedPin", note.getHashedPin());
+            intent.putExtra("folder_id", note.getFolder_id());
+            intent.putExtra("isDeleted", note.getIsDeleted());
+            intent.putExtra("deleted_date", note.getDeleted_date());
+            startActivity(intent);
+        }
+
+        else {
+            Toast.makeText(this, "Cannot open unsupported note type: " + noteType, Toast.LENGTH_SHORT).show();
+            Log.w(TAG, "Attempted to open unsupported note type: " + noteType + " for note ID: " + note.getNote_id());
+        }
+    }
+
+    private CollectionReference getNoteCollectionRef(String noteType) {
+        if (uid == null) {
+            Log.e(TAG, "UID is null in getNoteCollectionRef.");
+            return null;
+        }
+        if ("text".equals(noteType)) {
+            return userRef.collection("notes");
+        } else if ("drawing".equals(noteType) || "audio".equals(noteType) || "image".equals(noteType) || "list".equals(noteType)) {
+            return userRef.collection("miscellaneous_notes");
+        }
+        Log.e(TAG, "Unknown note type encountered in getNoteCollectionRef: " + noteType + ". Defaulting to 'notes'.");
+        return userRef.collection("notes");
     }
 }

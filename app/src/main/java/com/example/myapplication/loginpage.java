@@ -33,8 +33,7 @@ public class loginpage extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        about = findViewById(R.id.about);
-        contact = findViewById(R.id.contact);
+
         et_email = findViewById(R.id.email);
         et_password = findViewById(R.id.password);
         newuser = findViewById(R.id.newuser);
@@ -42,6 +41,8 @@ public class loginpage extends AppCompatActivity {
         tv_email = findViewById(R.id.tv3);
         tv_password = findViewById(R.id.tv5);
         mAuth = FirebaseAuth.getInstance();
+        about = findViewById(R.id.about);
+        contact = findViewById(R.id.contact);
         String url = "https://paffle.my.canva.site/notetea";
 
         about.setOnClickListener(new View.OnClickListener() {

@@ -29,8 +29,6 @@
             android:textColor="@android:color/black"
             android:paddingTop="10dp"
             android:paddingBottom="12dp"
-            android:clickable="true"
-            android:focusable="true"
             android:textStyle="bold"
             android:background="?android:attr/selectableItemBackground" />
 

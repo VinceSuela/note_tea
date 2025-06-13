@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#E0C8C8"
-    tools:context=".folderpage">
+    tools:context=".binpage">
 
 
 
@@ -67,51 +67,6 @@
 
     </RelativeLayout>
 
-    <RelativeLayout
-        android:id="@+id/searchnote"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/header"
-        >
-
-        <EditText
-            android:id="@+id/search"
-            android:layout_width="wrap_content"
-            android:layout_height="50dp"
-            android:layout_marginTop="15dp"
-            android:paddingLeft="15dp"
-            android:layout_marginHorizontal="20dp"
-            android:ems="10"
-            android:inputType="text"
-            android:textColor="#9F8F8F"
-            android:hint="Search notes..."
-            android:textColorHint="#9F8F8F"
-            android:background="@drawable/rectangle10"
-            />
-
-        <ImageView
-            android:id="@+id/searchbutton"
-            android:layout_width="55dp"
-            android:layout_height="38dp"
-            android:layout_alignRight="@+id/search"
-            android:layout_marginTop="21dp"
-            android:layout_marginRight="4dp"
-            app:srcCompat="@drawable/search" />
-
-        <TextView
-            android:id="@+id/tv3"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="5dp"
-            android:paddingLeft="20dp"
-            android:layout_below="@+id/search"
-            android:text="Find your notes quickly."
-            android:textColor="#9F8F8F"
-            android:textStyle="bold"
-            />
-
-
-    </RelativeLayout>
 
 
     <TextView
@@ -120,10 +75,10 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="17dp"
         android:paddingLeft="20dp"
-        android:layout_below="@+id/searchnote"
+        android:layout_below="@+id/header"
         android:textSize="23dp"
         android:textColor="#594444"
-        android:text="Your Folders"
+        android:text="Your Deleted Notes"
         android:textStyle="bold"
         />
 
@@ -135,42 +90,20 @@
         android:layout_marginTop="-2dp"
         android:paddingLeft="20dp"
         android:layout_below="@+id/tv4"
-        android:text="Recent notes"
+        android:text="Recent deleted notes"
         android:textColor="#9F8F8F"
         android:textStyle="bold"
         />
 
-    <RelativeLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/tv5"
-        android:layout_above="@+id/footer"
-        >
+
 
         <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/folders_recycler_view"
+            android:layout_marginTop="3dp"
+            android:id="@+id/notelist"
+            android:layout_above="@+id/footer"
+            android:layout_below="@id/tv5"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:padding="8dp"
-            android:clipToPadding="false"
-            tools:listitem="@layout/folder" />
-
-        <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/fab_add_folder"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentEnd="true"
-            android:layout_alignParentBottom="true"
-            android:layout_margin="16dp"
-            android:clickable="true"
-            android:focusable="true"
-            app:tint="@android:color/white"
-            app:srcCompat="@android:drawable/ic_input_add"
-            android:contentDescription="Add new folder" />
-
-
-    </RelativeLayout>
-
+            android:layout_height="match_parent" />
 
     <LinearLayout
         android:id="@+id/footer"
@@ -181,39 +114,6 @@
         android:background="#B6A0A0"
         android:orientation="horizontal"
         >
-
-
-        <RelativeLayout
-            android:id="@+id/trash"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="9dp"
-            android:layout_marginBottom="10dp"
-            >
-
-
-            <ImageView
-                android:id="@+id/calendar"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-
-                app:srcCompat="@drawable/trash" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_below="@+id/calendar"
-                android:text="Bin"
-                android:textStyle="bold"
-                />
-
-        </RelativeLayout>
-
-        <Space
-            android:layout_width="100dp"
-            android:layout_height="wrap_content"
-            />
 
         <RelativeLayout
             android:id="@+id/note"
@@ -238,6 +138,40 @@
                 android:layout_below="@+id/notes"
                 android:layout_marginTop="1dp"
                 android:text="Notes"
+                android:textStyle="bold"
+                />
+
+        </RelativeLayout>
+
+        <Space
+            android:layout_width="100dp"
+            android:layout_height="wrap_content"
+            />
+
+
+        <RelativeLayout
+            android:id="@+id/folders"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="11dp"
+            android:layout_marginBottom="9dp"
+            >
+
+
+            <ImageView
+                android:id="@+id/folder"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginLeft="15dp"
+                android:layout_marginTop="-1.5dp"
+                app:srcCompat="@drawable/folder1" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/folder"
+                android:text="Folders"
                 android:textStyle="bold"
                 />
 

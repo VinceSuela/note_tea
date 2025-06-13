@@ -1,17 +1,21 @@
-// com.example.myapplication/folderpage.java
 package com.example.myapplication;
+
+import static android.content.ContentValues.TAG;
 
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.Editable;
 import android.text.InputType;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
@@ -19,40 +23,54 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.Tasks;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.DocumentChange;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.QuerySnapshot;
-import com.google.firebase.firestore.Query; // Import Query
+import com.google.firebase.firestore.Query;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class folderpage extends AppCompatActivity implements FolderAdapter.OnFolderClickListener,
-        FolderActionsDialogFragment.FolderActionListener { // Ensure this is still implemented
+        FolderActionsDialogFragment.FolderActionListener {
 
-    RelativeLayout notes;
+    RelativeLayout notes, bin;
+    TextView username;
     private RecyclerView foldersRecyclerView;
     private FolderAdapter folderAdapter;
     private ArrayList<Folder> folderArrayList;
+    private ArrayList<Folder> originalFolderList;
     private FirebaseFirestore db;
     private FirebaseAuth auth;
     private FirebaseUser user;
     private String uid;
     private ListenerRegistration folderListenerRegistration;
     private ProgressDialog progressDialog;
+    private EditText searchFolderEditText;
+    private ImageView searchFolderButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_folderpage);
 
+        searchFolderEditText = findViewById(R.id.search);
+        searchFolderButton = findViewById(R.id.searchbutton);
         notes = findViewById(R.id.note);
+        bin = findViewById(R.id.trash);
+        username = findViewById(R.id.tv1);
 
         db = FirebaseFirestore.getInstance();
         auth = FirebaseAuth.getInstance();
@@ -74,7 +92,7 @@ public class folderpage extends AppCompatActivity implements FolderAdapter.OnFol
         foldersRecyclerView = findViewById(R.id.folders_recycler_view);
         foldersRecyclerView.setHasFixedSize(true);
         foldersRecyclerView.setLayoutManager(new GridLayoutManager(this, 2));
-
+        originalFolderList = new ArrayList<>();
         folderArrayList = new ArrayList<>();
         folderAdapter = new FolderAdapter(this, folderArrayList, this);
         foldersRecyclerView.setAdapter(folderAdapter);
@@ -84,12 +102,40 @@ public class folderpage extends AppCompatActivity implements FolderAdapter.OnFol
 
         listenForFolders();
 
+        username.setText(user.getEmail());
+
+        searchFolderButton.setOnClickListener(v -> {
+            String query = searchFolderEditText.getText().toString().trim();
+            filterFolders(query);
+        });
+
+        searchFolderEditText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) { /* Not used */ }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                filterFolders(s.toString());
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) { /* Not used */ }
+        });
+
         notes.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(getApplicationContext(), mainpage.class);
                 startActivity(intent);
                 finish();
+            }
+        });
+
+        bin.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(folderpage.this, binpage.class);
+                startActivity(intent);
             }
         });
     }
@@ -128,7 +174,7 @@ public class folderpage extends AppCompatActivity implements FolderAdapter.OnFol
                 .add(newFolder)
                 .addOnSuccessListener(documentReference -> {
                     String folderId = documentReference.getId();
-                    documentReference.update("folder_id", folderId); // Update the document with its own ID
+                    documentReference.update("folder_id", folderId);
                     Toast.makeText(folderpage.this, "Folder '" + folderName + "' created!", Toast.LENGTH_SHORT).show();
                 })
                 .addOnFailureListener(e -> {
@@ -141,7 +187,16 @@ public class folderpage extends AppCompatActivity implements FolderAdapter.OnFol
     private void listenForFolders() {
         if (uid == null) {
             Toast.makeText(this, "User not authenticated.", Toast.LENGTH_SHORT).show();
+
+            if (progressDialog != null && progressDialog.isShowing()) {
+                progressDialog.dismiss();
+            }
             return;
+        }
+
+
+        if (progressDialog != null && !progressDialog.isShowing()) {
+            progressDialog.show();
         }
 
         folderListenerRegistration = db.collection("users").document(uid)
@@ -150,7 +205,8 @@ public class folderpage extends AppCompatActivity implements FolderAdapter.OnFol
                 .addSnapshotListener(new com.google.firebase.firestore.EventListener<QuerySnapshot>() {
                     @Override
                     public void onEvent(@Nullable QuerySnapshot value, @Nullable FirebaseFirestoreException error) {
-                        if (progressDialog.isShowing()) {
+
+                        if (progressDialog != null && progressDialog.isShowing()) {
                             progressDialog.dismiss();
                         }
 
@@ -161,106 +217,82 @@ public class folderpage extends AppCompatActivity implements FolderAdapter.OnFol
                         }
 
                         if (value == null) {
+                            Log.d("folderpage", "Received null QuerySnapshot for folders.");
                             return;
                         }
 
-                        // Use a temporary list to build the new state, then update the main list
-                        ArrayList<Folder> updatedFolderList = new ArrayList<>();
-                        // Track changes based on document IDs to properly handle modifications and additions
-                        HashMap<String, Folder> currentFoldersMap = new HashMap<>();
-                        for(Folder f : folderArrayList) {
-                            currentFoldersMap.put(f.getFolder_id(), f);
-                        }
-
-                        for (DocumentChange dc : value.getDocumentChanges()) {
-                            Folder folder = dc.getDocument().toObject(Folder.class);
-                            folder.setFolder_id(dc.getDocument().getId()); // Manually set the ID
-
-                            switch (dc.getType()) {
-                                case ADDED:
-                                    // If added, start fetching its count
-                                    updatedFolderList.add(folder); // Add to temp list for display
-                                    fetchAndSetNoteCount(folder); // Fetch count for the new folder
-                                    break;
-                                case MODIFIED:
-                                    // If modified, update its properties and re-fetch its count
-                                    // Find it in the existing list and update, or add if new (shouldn't be new if modified)
-                                    boolean found = false;
-                                    for (int i = 0; i < folderArrayList.size(); i++) {
-                                        if (folderArrayList.get(i).getFolder_id().equals(folder.getFolder_id())) {
-                                            folderArrayList.set(i, folder); // Update the object in place
-                                            found = true;
-                                            break;
-                                        }
-                                    }
-                                    if (!found) { // Should not happen often if IDs are consistent
-                                        folderArrayList.add(folder);
-                                    }
-                                    fetchAndSetNoteCount(folder); // Fetch count for the modified folder
-                                    break;
-                                case REMOVED:
-                                    // Removing handled by Adapter
-                                    // The `folderArrayList.clear()` and re-add approach handles this simpler if you switch to it
-                                    // If using granular, you'd remove from `folderArrayList` based on oldIndex or ID.
-                                    break;
-                            }
-                        }
-
-                        // For simplicity and to ensure order matches query,
-                        // it's often easier to clear and re-add all current documents
-                        // after handling individual changes. This also ensures counts for *all*
-                        // existing folders are eventually updated if notes change.
-                        folderArrayList.clear();
-                        for (com.google.firebase.firestore.DocumentSnapshot doc : value.getDocuments()) {
+                        originalFolderList.clear();
+                        for (DocumentSnapshot doc : value.getDocuments()) {
                             Folder folder = doc.toObject(Folder.class);
                             if (folder != null) {
                                 folder.setFolder_id(doc.getId());
-
-                                // If the folder was already in our list, copy its existing notesCount
-                                // to avoid flickering "0 notes" if count fetch is still pending.
-                                if (currentFoldersMap.containsKey(folder.getFolder_id())) {
-                                    folder.setNotesCount(currentFoldersMap.get(folder.getFolder_id()).getNotesCount());
-                                }
-                                folderArrayList.add(folder);
-                                // Always fetch count for all folders to ensure counts are fresh
-                                // This will trigger 'notifyDataSetChanged' on its own
-                                fetchAndSetNoteCount(folder);
+                                originalFolderList.add(folder);
                             }
                         }
-                        folderAdapter.notifyDataSetChanged(); // Notify adapter of structural changes
+
+                        for (Folder folder : originalFolderList) {
+                            fetchAndSetNoteCount(folder);
+                        }
+
+                        filterFolders(searchFolderEditText.getText().toString());
                     }
                 });
     }
 
-    // <--- NEW: Method to fetch and set the notes count for a single folder --->
-    private void fetchAndSetNoteCount(Folder folder) {
-        if (uid == null || folder.getFolder_id() == null) {
-            return;
+    private void filterFolders(String query) {
+        folderArrayList.clear();
+
+        if (query.isEmpty()) {
+
+            folderArrayList.addAll(originalFolderList);
+        } else {
+            String lowerCaseQuery = query.toLowerCase();
+            for (Folder item : originalFolderList) {
+                if (item.getFolder_name() != null && item.getFolder_name().toLowerCase().contains(lowerCaseQuery)) {
+                    folderArrayList.add(item);
+                }
+            }
+        }
+        folderAdapter.notifyDataSetChanged();
+    }
+
+    private Task<List<Object>> fetchAndSetNoteCount(Folder folderToUpdateCountFor) {
+        if (uid == null || folderToUpdateCountFor.getFolder_id() == null) {
+            return Tasks.forResult(null);
         }
 
-        db.collection("users").document(uid)
+        Task<QuerySnapshot> textNotesCountTask = db.collection("users").document(uid)
                 .collection("notes")
-                .whereEqualTo("folder_id", folder.getFolder_id()) // Query notes belonging to this folder
-                .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    int count = queryDocumentSnapshots.size();
-                    folder.setNotesCount(count); // Update the notesCount in the Folder object
+                .whereEqualTo("folder_id", folderToUpdateCountFor.getFolder_id())
+                .whereEqualTo("isDeleted", false)
+                .get();
 
-                    // Find the position of this folder in the ArrayList and notify just that item
-                    int index = folderArrayList.indexOf(folder);
+        Task<QuerySnapshot> miscNotesCountTask = db.collection("users").document(uid)
+                .collection("miscellaneous_notes")
+                .whereEqualTo("folder_id", folderToUpdateCountFor.getFolder_id())
+                .whereEqualTo("isDeleted", false)
+                .get();
+
+        return Tasks.whenAllSuccess(textNotesCountTask, miscNotesCountTask)
+                .addOnSuccessListener(results -> {
+                    int textNotesCount = ((QuerySnapshot) results.get(0)).size();
+                    int miscNotesCount = ((QuerySnapshot) results.get(1)).size();
+                    int totalCount = textNotesCount + miscNotesCount;
+
+                    folderToUpdateCountFor.setNotesCount(totalCount);
+
+                    int index = folderArrayList.indexOf(folderToUpdateCountFor);
                     if (index != -1) {
-                        folderAdapter.notifyItemChanged(index);
-                    } else {
-                        // If folder not found (e.g., list structure changed), notify all.
-                        folderAdapter.notifyDataSetChanged();
+                        if (searchFolderEditText.getText().toString().isEmpty()) {
+                            folderAdapter.notifyItemChanged(index);
+                        }
                     }
+                    Log.d("folderpage", "Updated count for folder " + folderToUpdateCountFor.getFolder_name() + ": " + totalCount);
                 })
                 .addOnFailureListener(e -> {
-                    Log.e("folderpage", "Error fetching note count for folder " + folder.getFolder_name() + ": " + e.getMessage());
-                    // Optionally set count to -1 or show error for this specific folder
+                    Log.e(TAG, "Error fetching note count for folder " + folderToUpdateCountFor.getFolder_name() + ": " + e.getMessage());
                 });
     }
-
 
     @Override
     protected void onDestroy() {
@@ -273,11 +305,8 @@ public class folderpage extends AppCompatActivity implements FolderAdapter.OnFol
         }
     }
 
-    // --- FolderAdapter.OnFolderClickListener implementations ---
-
     @Override
     public void onFolderClick(Folder folder) {
-        Toast.makeText(this, "Opening folder: " + folder.getFolder_name(), Toast.LENGTH_SHORT).show();
         Intent intent = new Intent(this, FolderNotesActivity.class);
         intent.putExtra("folder_id", folder.getFolder_id());
         intent.putExtra("folder_name", folder.getFolder_name());
@@ -286,17 +315,14 @@ public class folderpage extends AppCompatActivity implements FolderAdapter.OnFol
 
     @Override
     public void onFolderLongClick(Folder folder) {
-        Toast.makeText(this, "Long clicked folder: " + folder.getFolder_name(), Toast.LENGTH_SHORT).show();
         FolderActionsDialogFragment fragment = FolderActionsDialogFragment.newInstance(
                 folder.getFolder_id(),
                 folder.getFolder_name()
         );
-        // Assuming FolderActionsDialogFragment has a setTargetFragment if you want to pass results back
-        // Or ensure its listener interface is correctly implemented by folderpage
         fragment.show(getSupportFragmentManager(), "FolderActionsDialogFragment");
     }
 
-    // --- FolderActionsDialogFragment.FolderActionListener implementations ---
+
     @Override
     public void onRenameFolder(String folderId, String currentFolderName) {
         Folder folderToRename = new Folder(currentFolderName);
@@ -307,7 +333,7 @@ public class folderpage extends AppCompatActivity implements FolderAdapter.OnFol
     @Override
     public void onDeleteFolder(String folderId) {
         String folderName = "Unknown Folder";
-        for (Folder f : folderArrayList) {
+        for (Folder f : originalFolderList) {
             if (f.getFolder_id().equals(folderId)) {
                 folderName = f.getFolder_name();
                 break;
@@ -318,7 +344,6 @@ public class folderpage extends AppCompatActivity implements FolderAdapter.OnFol
         showDeleteFolderConfirmation(folderToDelete);
     }
 
-    // Existing methods for handling rename and delete logic
     private void showRenameFolderDialog(Folder folder) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Rename Folder");
@@ -346,28 +371,60 @@ public class folderpage extends AppCompatActivity implements FolderAdapter.OnFol
     }
 
     private void showDeleteFolderConfirmation(Folder folder) {
+        String time = new SimpleDateFormat("dd-MM-yyyy HH:mm", Locale.getDefault()).format(new Date()).toString();
+
         new AlertDialog.Builder(this)
                 .setTitle("Delete Folder")
-                .setMessage("Are you sure you want to delete folder '" + folder.getFolder_name() + "'? All notes inside this folder will also be deleted.")
-                .setPositiveButton("Delete", new DialogInterface.OnClickListener() {
+                .setMessage("Are you sure you want to delete folder '" + folder.getFolder_name() + "'? All notes inside this folder will be moved to the bin.")
+                .setPositiveButton("Delete Folder", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
-                        // First, delete notes within the folder
+                        ProgressDialog deletionProgressDialog = new ProgressDialog(folderpage.this);
+                        deletionProgressDialog.setMessage("Deleting folder and moving notes to bin...");
+                        deletionProgressDialog.setCancelable(false);
+                        deletionProgressDialog.show();
+
                         db.collection("users").document(uid)
                                 .collection("notes")
-                                .whereEqualTo("folder_id", folder.getFolder_id()) // Ensure "folder_id" matches note's field
+                                .whereEqualTo("folder_id", folder.getFolder_id())
                                 .get()
                                 .addOnSuccessListener(queryDocumentSnapshots -> {
-                                    for (com.google.firebase.firestore.DocumentSnapshot doc : queryDocumentSnapshots) {
-                                        doc.getReference().delete(); // Delete each note
+                                    List<Task<Void>> noteUpdateTasks = new ArrayList<>();
+                                    for (DocumentSnapshot doc : queryDocumentSnapshots) {
+                                        Map<String, Object> updates = new HashMap<>();
+                                        updates.put("isDeleted", true);
+                                        updates.put("deleted_date", time);
+                                        updates.put("folder_id", null);
+
+                                        noteUpdateTasks.add(doc.getReference().update(updates));
                                     }
-                                    // Then delete the folder itself
-                                    db.collection("users").document(uid)
-                                            .collection("folders").document(folder.getFolder_id())
-                                            .delete()
-                                            .addOnSuccessListener(aVoid -> Toast.makeText(folderpage.this, "Folder and its notes deleted!", Toast.LENGTH_SHORT).show())
-                                            .addOnFailureListener(e -> Toast.makeText(folderpage.this, "Error deleting folder: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+
+
+                                    Tasks.whenAllSuccess(noteUpdateTasks)
+                                            .addOnSuccessListener(aVoid -> {
+                                                db.collection("users").document(uid)
+                                                        .collection("folders").document(folder.getFolder_id())
+                                                        .delete()
+                                                        .addOnSuccessListener(v -> {
+                                                            deletionProgressDialog.dismiss();
+                                                            Toast.makeText(folderpage.this, "Folder deleted and notes moved to bin!", Toast.LENGTH_SHORT).show();
+                                                        })
+                                                        .addOnFailureListener(e -> {
+                                                            deletionProgressDialog.dismiss();
+                                                            Toast.makeText(folderpage.this, "Error deleting folder: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                                                            Log.e("folderpage", "Error deleting folder itself", e);
+                                                        });
+                                            })
+                                            .addOnFailureListener(e -> {
+                                                deletionProgressDialog.dismiss();
+                                                Toast.makeText(folderpage.this, "Error moving notes to bin: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                                                Log.e("folderpage", "Error updating notes to bin status", e);
+                                            });
                                 })
-                                .addOnFailureListener(e -> Toast.makeText(folderpage.this, "Error finding notes in folder: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                                .addOnFailureListener(e -> {
+                                    deletionProgressDialog.dismiss();
+                                    Toast.makeText(folderpage.this, "Error finding notes in folder: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                                    Log.e("folderpage", "Error querying notes in folder", e);
+                                });
                     }
                 })
                 .setNegativeButton(android.R.string.cancel, null)

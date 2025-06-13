@@ -1,26 +1,33 @@
-// com.example.myapplication/Folder.java
 package com.example.myapplication;
 
 import com.google.firebase.firestore.Exclude;
 import com.google.firebase.firestore.ServerTimestamp;
 import java.util.Date;
+import java.util.Objects;
 
 public class Folder {
     private String folder_id;
     private String folder_name;
     private int notesCount = 0;
-    private @ServerTimestamp Date creation_date; // Optional: to track creation time
+    private @ServerTimestamp Date creation_date;
 
     public Folder() {
-        // Public no-argument constructor needed for Firestore
+
     }
 
     public Folder(String folder_name) {
         this.folder_name = folder_name;
-        // folder_id will be set by Firestore document ID
     }
 
-    @Exclude // Exclude from direct Firestore mapping, as it's the doc ID
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Folder folder = (Folder) o;
+        return Objects.equals(folder_id, folder.folder_id);
+    }
+
+    @Exclude
     public String getFolder_id() {
         return folder_id;
     }
