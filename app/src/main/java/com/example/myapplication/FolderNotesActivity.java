@@ -572,19 +572,24 @@ public class FolderNotesActivity extends AppCompatActivity
             String enteredPin = input.getText().toString().trim();
             String hashedEnteredPin = hashPin(enteredPin);
 
+            if (position < 0 || position >= notesModels.size()) {
+                Toast.makeText(this, "Error: Note not found for PIN verification.", Toast.LENGTH_SHORT).show();
+                Log.e(TAG, "showVerifyPinDialog: Invalid position: " + position + ", notesModels size: " + notesModels.size());
+                return;
+            }
+
             note noteToVerify = notesModels.get(position);
             if (hashedEnteredPin != null && hashedEnteredPin.equals(noteToVerify.getHashedPin())) {
                 Toast.makeText(this, "PIN correct!", Toast.LENGTH_SHORT).show();
-
                 if (openingNote) {
                     note tempNoteForOpening = new note(
                             noteToVerify.getImageUrl(),
                             noteToVerify.getType(),
                             noteToVerify.getFolder_id(),
                             noteToVerify.getDeleted_date(),
-                            null,
+                            noteToVerify.getHashedPin(),
                             noteToVerify.getIsDeleted(),
-                            false,
+                            noteToVerify.getIsLocked(),
                             noteToVerify.getIsPinned(),
                             noteToVerify.getNote_content(),
                             noteToVerify.getNote_date(),
@@ -598,12 +603,12 @@ public class FolderNotesActivity extends AppCompatActivity
                 }
             } else {
                 Toast.makeText(this, "Incorrect PIN.", Toast.LENGTH_SHORT).show();
+                Log.d(TAG, "Incorrect PIN entered for note: " + noteId);
             }
         });
         builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
         builder.show();
     }
-
     private void updateNoteLockStatus(String noteId, int position, boolean lockedStatus, String hashedPin, String noteType) {
         if (noteType == null) {
             Log.e(TAG, "noteType is null in updateNoteLockStatus. Cannot update note.");

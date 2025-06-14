@@ -107,7 +107,7 @@ public class DrawingView extends View {
 
     private void setPaintPropertiesForStroke() {
         if (isErasing) {
-            drawPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.CLEAR));
+            drawPaint.setXfermode(null);
             drawPaint.setColor(Color.WHITE);
             drawPaint.setStrokeWidth(currentBrushSize * 2);
             drawPaint.setAlpha(255);
@@ -146,6 +146,13 @@ public class DrawingView extends View {
 
     public void setErase(boolean isErase) {
         this.isErasing = isErase;
+        if (isErase) {
+            drawPaint.setColor(Color.WHITE);
+            drawPaint.setXfermode(null);
+        } else {
+            drawPaint.setColor(paintColor);
+            drawPaint.setXfermode(null);
+        }
         setPaintPropertiesForStroke();
         invalidate();
     }
