@@ -51,5 +51,6 @@ dependencies {
     implementation(libs.skydoves.colorpickerview)
     implementation(libs.squareup.okhttp3)
     implementation(libs.firebase.functions)
+    implementation("com.google.android.gms:play-services-auth")
 
 }

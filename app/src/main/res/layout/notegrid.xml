@@ -100,7 +100,7 @@
 
 
 
-        <TextView
+        <jp.wasabeef.richeditor.RichEditor
 
             android:id="@+id/note_content"
 
@@ -115,6 +115,8 @@
             android:textColor="#CACACA"
 
             android:textSize="12sp"
+
+            android:background="#C1A5BE"
 
             app:layout_constraintBottom_toBottomOf="parent"
 

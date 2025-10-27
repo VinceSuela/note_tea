@@ -415,7 +415,7 @@ public class drawingpageedit extends AppCompatActivity implements View.OnClickLi
     }
 
     private void navigateToSecondaryPage() {
-        Intent intent = new Intent(drawingpageedit.this, secondarypage.class);
+        Intent intent = new Intent(drawingpageedit.this, mainpage.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
         finish();

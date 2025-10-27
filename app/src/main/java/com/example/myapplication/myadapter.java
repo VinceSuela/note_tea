@@ -10,25 +10,33 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
-
 import androidx.recyclerview.widget.RecyclerView;
 
-import java.util.ArrayList;
-import java.util.List;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
-public class myadapter extends RecyclerView.Adapter<myadapter.TextNoteViewHolder> {
+import java.util.ArrayList;
+
+import jp.wasabeef.richeditor.RichEditor;
+
+public class myadapter extends RecyclerView.Adapter<myadapter.NoteViewHolder> {
 
     private static final String TAG = "MyAdapter";
-    private Context context;
-    private ArrayList<note> noteArrayList;
-    private rv_onClick listener;
+    Context context;
+    ArrayList<note> noteArrayList;
+    rv_onClick listener;
     private boolean isGridLayout;
-    private static final int VIEW_TYPE_LIST = 0;
-    private static final int VIEW_TYPE_GRID = 1;
+
+    // Define view types
+    private static final int VIEW_TYPE_TEXT_LIST_ITEM = 1;
+    private static final int VIEW_TYPE_TEXT_GRID_ITEM = 2;
+    private static final int VIEW_TYPE_DRAWING_LIST_ITEM = 3;
+    private static final int VIEW_TYPE_DRAWING_GRID_ITEM = 4;
+
 
     public myadapter(Context context, ArrayList<note> noteArrayList, rv_onClick listener, boolean isGridLayout) {
         this.context = context;
@@ -38,201 +46,273 @@ public class myadapter extends RecyclerView.Adapter<myadapter.TextNoteViewHolder
     }
 
     public void setLayoutMode(boolean isGridLayout) {
-        if (this.isGridLayout != isGridLayout) {
-            this.isGridLayout = isGridLayout;
-            notifyDataSetChanged();
-        }
+        this.isGridLayout = isGridLayout;
+        notifyDataSetChanged();
     }
 
     @Override
     public int getItemViewType(int position) {
-        return isGridLayout ? VIEW_TYPE_GRID : VIEW_TYPE_LIST;
+        String type = noteArrayList.get(position).getType();
+        if (type == null) type = "text"; // Default if type is missing
+
+        if ("drawing".equals(type)) {
+            return isGridLayout ? VIEW_TYPE_DRAWING_GRID_ITEM : VIEW_TYPE_DRAWING_LIST_ITEM;
+        } else { // Covers "text", "list" (and future "audio", "image" if not given specific layouts)
+            return isGridLayout ? VIEW_TYPE_TEXT_GRID_ITEM : VIEW_TYPE_TEXT_LIST_ITEM;
+        }
     }
 
     @NonNull
     @Override
-    public TextNoteViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+    public NoteViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view;
-        if (viewType == VIEW_TYPE_LIST) {
-            view = LayoutInflater.from(context).inflate(R.layout.notelist, parent, false);
-        } else {
-            view = LayoutInflater.from(context).inflate(R.layout.notegrid, parent, false);
+        switch (viewType) {
+            case VIEW_TYPE_DRAWING_LIST_ITEM:
+                view = LayoutInflater.from(context).inflate(R.layout.card_drawing_list_mode, parent, false);
+                break;
+            case VIEW_TYPE_DRAWING_GRID_ITEM:
+                view = LayoutInflater.from(context).inflate(R.layout.card_drawing_grid_mode, parent, false);
+                break;
+            case VIEW_TYPE_TEXT_GRID_ITEM:
+                view = LayoutInflater.from(context).inflate(R.layout.notegrid, parent, false);
+                break;
+            case VIEW_TYPE_TEXT_LIST_ITEM:
+            default:
+                view = LayoutInflater.from(context).inflate(R.layout.notelist, parent, false);
+                break;
         }
-        return new TextNoteViewHolder(view, listener, noteArrayList);
+        return new NoteViewHolder(view, listener, noteArrayList, viewType);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull TextNoteViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull NoteViewHolder holder, int position) {
+
         note currentNote = noteArrayList.get(position);
-
-        if (holder.noteTitle != null) {
-            holder.noteTitle.setText(currentNote.getNote_title() != null ? currentNote.getNote_title() : "");
+        if (currentNote == null) {
+            Log.e(TAG, "currentNote is null at position: " + position);
+            return;
         }
 
+        String noteType = currentNote.getType();
+        if (noteType == null) noteType = "text";
 
+        // Common Pin and Lock icons
         if (holder.pinIcon != null) {
-            if (currentNote.getIsPinned()) {
-                holder.pinIcon.setImageResource(R.drawable.pinned);
-                holder.pinIcon.setVisibility(View.VISIBLE);
-            } else {
-                holder.pinIcon.setImageResource(R.drawable.pin2);
-                holder.pinIcon.setVisibility(View.VISIBLE);
-            }
+            holder.pinIcon.setImageResource(currentNote.getIsPinned() ? R.drawable.pinned : R.drawable.pin2);
         }
-
 
         if (holder.lockedIcon != null) {
-            if (currentNote.getIsLocked()) {
-                holder.lockedIcon.setVisibility(View.VISIBLE);
-                holder.lockedIcon.setImageResource(R.drawable.locked);
-            } else {
-                holder.lockedIcon.setVisibility(View.GONE);
-            }
+            holder.lockedIcon.setVisibility(currentNote.getIsLocked() ? View.VISIBLE : View.GONE);
+            if(currentNote.getIsLocked()) holder.lockedIcon.setImageResource(R.drawable.locked);
         }
+        
+        int viewType = holder.getItemViewType();
 
+        switch (viewType) {
+            case VIEW_TYPE_DRAWING_LIST_ITEM:
+                if (holder.drawingTitle != null) {
+                    holder.drawingTitle.setText(currentNote.getNote_title());
+                }
+                if (holder.drawingDate != null) {
+                    holder.drawingDate.setText(currentNote.getNote_date()); 
+                }
+                if (holder.drawingThumbnail != null) {
+                    setDrawingThumbnail(holder.drawingThumbnail, currentNote.getImageUrl());
+                }
+                break;
 
-        if (!isGridLayout) {
+            case VIEW_TYPE_DRAWING_GRID_ITEM:
+                if (holder.drawingTitle != null) {
+                    holder.drawingTitle.setText(currentNote.getNote_title());
+                }
+                if (holder.drawingThumbnail != null) {
+                    setDrawingThumbnail(holder.drawingThumbnail, currentNote.getImageUrl());
+                }
+                break;
 
-            if (holder.listCardView != null) holder.listCardView.setVisibility(View.VISIBLE);
-            if (holder.gridCardView != null) holder.gridCardView.setVisibility(View.GONE);
-
-            if (holder.noteDate != null) {
-                holder.noteDate.setText(currentNote.getNote_date() != null ? currentNote.getNote_date() : "");
-                holder.noteDate.setVisibility(View.VISIBLE);
-            }
-            if (holder.deleteIcon != null) {
-                holder.deleteIcon.setVisibility(View.VISIBLE);
-            }
-            if (holder.drawingThumbnail != null) {
-
-                if ("drawing".equals(currentNote.getType()) && currentNote.getImageUrl() != null && !currentNote.getImageUrl().isEmpty()) {
-                    try {
-                        byte[] decodedString = Base64.decode(currentNote.getImageUrl(), Base64.DEFAULT);
-                        Bitmap decodedBitmap = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
-                        if (decodedBitmap != null) {
-                            holder.drawingThumbnail.setImageBitmap(decodedBitmap);
-                            holder.drawingThumbnail.setVisibility(View.VISIBLE);
-                        } else {
-                            holder.drawingThumbnail.setImageResource(R.drawable.placeholder_drawing);
-                            holder.drawingThumbnail.setVisibility(View.VISIBLE);
-                        }
-                    } catch (IllegalArgumentException e) {
-                        holder.drawingThumbnail.setImageResource(R.drawable.placeholder_drawing);
-                        holder.drawingThumbnail.setVisibility(View.VISIBLE);
-                        Log.e(TAG, "Invalid Base64 string for drawing: " + currentNote.getNote_id(), e);
+            case VIEW_TYPE_TEXT_GRID_ITEM:
+                if (holder.textListNoteTitle != null) {
+                    holder.textListNoteTitle.setText(currentNote.getNote_title());
+                }
+                if (holder.textListNoteContentGrid != null) {
+                    if ("text".equals(noteType)) {
+                        holder.textListNoteContentGrid.setHtml(currentNote.getNote_content() != null ? currentNote.getNote_content() : "");
+                    } else if ("list".equals(noteType)){
+                        // **THE FIX**: Use a helper to format the list content for the RichEditor.
+                        String listPreview = formatListContentForPreview(currentNote.getNote_content());
+                        holder.textListNoteContentGrid.setHtml(listPreview);
+                    } else {
+                        holder.textListNoteContentGrid.setHtml(getNoteTypeDescription(noteType));
                     }
-                } else if ("text".equals(currentNote.getType()) || "note".equals(currentNote.getType())) {
-                    holder.drawingThumbnail.setImageResource(R.drawable.placeholder_drawing);
-                    holder.drawingThumbnail.setVisibility(View.VISIBLE);
-                } else {
-                    holder.drawingThumbnail.setVisibility(View.GONE);
                 }
-            }
+                break;
 
-            if (holder.noteContent != null) {
-                if ("text".equals(currentNote.getType()) || "note".equals(currentNote.getType())) {
-                    holder.noteContent.setText(currentNote.getNote_content() != null ? currentNote.getNote_content() : "");
-                    holder.noteContent.setVisibility(View.VISIBLE);
-                } else if ("drawing".equals(currentNote.getType())) {
-                    holder.noteContent.setText("Drawing Note");
-                    holder.noteContent.setVisibility(View.VISIBLE);
-                } else {
-                    holder.noteContent.setVisibility(View.GONE);
+            case VIEW_TYPE_TEXT_LIST_ITEM:
+            default:
+                if (holder.textListNoteTitle != null) {
+                    holder.textListNoteTitle.setText(currentNote.getNote_title());
                 }
+                // **THE FIX**: Always show the date, regardless of whether it's a text or list note.
+                if (holder.textListNoteDate != null) {
+                    holder.textListNoteDate.setText(currentNote.getNote_date());
+                }
+                break;
+        }
+    }
+    
+    // Refactored method to handle drawing thumbnails
+    private void setDrawingThumbnail(ImageView imageView, String base64Data) {
+        if (base64Data != null && !base64Data.isEmpty()) {
+            try {
+                byte[] decodedString = Base64.decode(base64Data, Base64.DEFAULT);
+                Bitmap decodedBitmap = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
+                imageView.setImageBitmap(decodedBitmap);
+            } catch (Exception e) {
+                Log.e(TAG, "Error decoding drawing thumbnail: " + e.getMessage());
+                imageView.setImageResource(R.drawable.placeholder_drawing); // Fallback placeholder
             }
-
         } else {
+            imageView.setImageResource(R.drawable.placeholder_drawing); // Fallback placeholder
+        }
+    }
 
-            if (holder.listCardView != null) holder.listCardView.setVisibility(View.GONE);
-            if (holder.gridCardView != null) holder.gridCardView.setVisibility(View.VISIBLE);
+    // Helper method to create a preview for list notes
+    private String formatListContentForPreview(String jsonContent) {
+        if (jsonContent == null || jsonContent.isEmpty()) {
+            return "<i>Empty list</i>";
+        }
+        StringBuilder htmlBuilder = new StringBuilder();
+        try {
+            JSONArray items = new JSONArray(jsonContent);
+            int limit = Math.min(items.length(), 5); // Show max 5 items in preview
+            for (int i = 0; i < limit; i++) {
+                JSONObject item = items.getJSONObject(i);
+                boolean isChecked = item.optBoolean("isChecked", false);
+                String text = item.optString("text", "");
 
-            if (holder.noteDate != null) holder.noteDate.setVisibility(View.GONE);
-            if (holder.deleteIcon != null) holder.deleteIcon.setVisibility(View.GONE);
-            if (holder.drawingThumbnail != null) holder.drawingThumbnail.setVisibility(View.GONE);
-
-            if (holder.noteContent != null) {
-                if ("text".equals(currentNote.getType()) || "note".equals(currentNote.getType())) {
-                    holder.noteContent.setText(currentNote.getNote_content() != null ? currentNote.getNote_content() : "");
-                    holder.noteContent.setVisibility(View.VISIBLE);
-                } else if ("drawing".equals(currentNote.getType())) {
-                    holder.noteContent.setText("Drawing Note");
-                    holder.noteContent.setVisibility(View.VISIBLE);
+                if (isChecked) {
+                    htmlBuilder.append("☑ ").append("<s>").append(text).append("</s>");
                 } else {
-                    holder.noteContent.setVisibility(View.GONE);
+                    htmlBuilder.append("☐ ").append(text);
                 }
-            } else {
-                Log.w(TAG, "note_content TextView not found in grid layout for note: " + currentNote.getNote_id());
+                htmlBuilder.append("<br>");
             }
+            if (items.length() > limit) {
+                htmlBuilder.append("...");
+            }
+        } catch (JSONException e) {
+            Log.e(TAG, "Error parsing list content for preview", e);
+            return "<i>List note</i>"; // Fallback text on parse error
+        }
+        return htmlBuilder.toString();
+    }
+
+    private String getNoteTypeDescription(String noteType) {
+        if (noteType == null) return "Note";
+        switch (noteType) {
+            case "list": return "List Note";
+            case "audio": return "Audio Note";
+            case "drawing": return "Drawing";
+            case "text": return "Text Note";
+            default: return "Note";
         }
     }
 
     @Override
     public int getItemCount() {
-        return noteArrayList.size();
+        return noteArrayList != null ? noteArrayList.size() : 0;
     }
 
-    public class TextNoteViewHolder extends RecyclerView.ViewHolder {
-
-        ImageView drawingThumbnail;
-        TextView noteTitle;
+    public static class NoteViewHolder extends RecyclerView.ViewHolder {
+        CardView cardViewRoot;
         ImageView pinIcon;
         ImageView lockedIcon;
-        TextView noteDate;
-        ImageView deleteIcon;
-        TextView noteContent;
-        CardView listCardView;
-        CardView gridCardView;
 
-        public TextNoteViewHolder(@NonNull View itemView, rv_onClick rv_onClick, ArrayList<note> notesArrayList) {
+        // Views for Text/List notes (from notelist.xml & notegrid.xml)
+        TextView textListNoteTitle;
+        TextView textListNoteDate;
+        RichEditor textListNoteContentGrid;
+        ImageView textListDeleteIcon;
+
+        // Views for Drawing notes
+        ImageView drawingThumbnail;
+        TextView drawingTitle;
+        TextView drawingDate;      
+        ImageView drawingDeleteIcon;
+
+        public NoteViewHolder(@NonNull View itemView, rv_onClick rv_onClick_listener, ArrayList<note> notesList, int viewType) {
             super(itemView);
 
-            noteTitle = itemView.findViewById(R.id.note_title);
             pinIcon = itemView.findViewById(R.id.pin);
             lockedIcon = itemView.findViewById(R.id.locked);
-            noteContent = itemView.findViewById(R.id.note_content);
-            drawingThumbnail = itemView.findViewById(R.id.drawing_thumbnail);
-            noteDate = itemView.findViewById(R.id.note_date);
-            deleteIcon = itemView.findViewById(R.id.delete);
-            listCardView = itemView.findViewById(R.id.card);
 
-
-            gridCardView = itemView.findViewById(R.id.gridcard);
-
-            View clickableCard = null;
-            if (listCardView != null) {
-                clickableCard = listCardView;
-            } else if (gridCardView != null) {
-                clickableCard = gridCardView;
+            switch (viewType) {
+                case VIEW_TYPE_DRAWING_LIST_ITEM:
+                    drawingThumbnail = itemView.findViewById(R.id.drawing_thumbnail);
+                    drawingTitle = itemView.findViewById(R.id.drawing_title);
+                    drawingDate = itemView.findViewById(R.id.drawing_date);
+                    drawingDeleteIcon = itemView.findViewById(R.id.delete); 
+                    cardViewRoot = itemView.findViewById(R.id.card); 
+                    break;
+                case VIEW_TYPE_DRAWING_GRID_ITEM:
+                    drawingThumbnail = itemView.findViewById(R.id.drawing_thumbnail);
+                    drawingTitle = itemView.findViewById(R.id.drawing_title);
+                    cardViewRoot = itemView.findViewById(R.id.gridcard); 
+                    break;
+                case VIEW_TYPE_TEXT_GRID_ITEM:
+                    textListNoteTitle = itemView.findViewById(R.id.note_title);
+                    textListNoteContentGrid = itemView.findViewById(R.id.note_content);
+                    cardViewRoot = itemView.findViewById(R.id.gridcard); 
+                    break;
+                case VIEW_TYPE_TEXT_LIST_ITEM:
+                default:
+                    textListNoteTitle = itemView.findViewById(R.id.note_title);
+                    textListNoteDate = itemView.findViewById(R.id.note_date);
+                    textListDeleteIcon = itemView.findViewById(R.id.delete);
+                    cardViewRoot = itemView.findViewById(R.id.card); 
+                    break;
             }
+            
+            View clickableTarget = (cardViewRoot != null) ? cardViewRoot : itemView;
 
-            if (clickableCard != null) {
-                clickableCard.setOnClickListener(v -> {
-                    if (rv_onClick != null && getAdapterPosition() != RecyclerView.NO_POSITION) {
-                        rv_onClick.onItemClicked(notesArrayList.get(getAdapterPosition()));
+            clickableTarget.setOnClickListener(v -> {
+                if (rv_onClick_listener != null) {
+                    int position = getAdapterPosition();
+                    if (position != RecyclerView.NO_POSITION) {
+                        rv_onClick_listener.onItemClicked(notesList.get(position));
                     }
-                });
+                }
+            });
 
-                clickableCard.setOnLongClickListener(v -> {
-                    if (rv_onClick != null && getAdapterPosition() != RecyclerView.NO_POSITION) {
-                        rv_onClick.onNoteLongClick(getAdapterPosition());
+            clickableTarget.setOnLongClickListener(v -> {
+                if (rv_onClick_listener != null) {
+                    int position = getAdapterPosition();
+                    if (position != RecyclerView.NO_POSITION) {
+                        rv_onClick_listener.onNoteLongClick(position);
                     }
-                    return true;
-                });
-            }
+                }
+                return true;
+            });
 
+            ImageView deleteIcon = (drawingDeleteIcon != null) ? drawingDeleteIcon : textListDeleteIcon;
             if (deleteIcon != null) {
                 deleteIcon.setOnClickListener(v -> {
-                    if (rv_onClick != null && getAdapterPosition() != RecyclerView.NO_POSITION) {
-                        rv_onClick.onDeleteClick(getAdapterPosition());
+                    if (rv_onClick_listener != null) {
+                        int position = getAdapterPosition();
+                        if (position != RecyclerView.NO_POSITION) {
+                            rv_onClick_listener.onDeleteClick(position);
+                        }
                     }
                 });
             }
 
             if (pinIcon != null) {
                 pinIcon.setOnClickListener(v -> {
-                    if (rv_onClick != null && getAdapterPosition() != RecyclerView.NO_POSITION) {
-                        boolean currentPinnedState = notesArrayList.get(getAdapterPosition()).getIsPinned();
-                        rv_onClick.onPinClick(getAdapterPosition(), currentPinnedState);
+                    if (rv_onClick_listener != null) {
+                        int position = getAdapterPosition();
+                        if (position != RecyclerView.NO_POSITION) {
+                            rv_onClick_listener.onPinClick(position, notesList.get(position).getIsPinned());
+                        }
                     }
                 });
             }

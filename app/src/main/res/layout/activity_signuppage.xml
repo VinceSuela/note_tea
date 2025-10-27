@@ -75,21 +75,43 @@
       android:textStyle="bold"
       />
 
-
-  <EditText
-      android:id="@+id/password"
+  <RelativeLayout
+      android:id="@+id/passwordet"
       android:layout_width="wrap_content"
-      android:layout_height="50dp"
-      android:layout_below="@+id/tv4"
-      android:layout_marginHorizontal="20dp"
-      android:layout_marginTop="10dp"
-      android:background="@drawable/rectangle10"
-      android:ems="10"
-      android:textColor="#4D3131"
-      android:inputType="textPassword"
-      android:paddingLeft="15dp"
-      android:hint="Enter Password"
-      android:textColorHint="#9F8F8F" />
+      android:layout_height="wrap_content"
+      android:layout_below="@+id/tv4">
+
+    <EditText
+        android:id="@+id/password"
+        android:layout_width="wrap_content"
+        android:layout_height="50dp"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/rectangle10"
+        android:ems="10"
+        android:textColor="#4D3131"
+        android:inputType="textPassword"
+        android:paddingLeft="15dp"
+        android:hint="Enter Password"
+        android:textColorHint="#9F8F8F"
+        />
+
+    <ImageView
+        android:id="@+id/viewstate"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_alignBottom="@+id/password"
+        android:layout_marginHorizontal="12dp"
+        android:layout_marginBottom="10dp"
+        android:layout_alignEnd="@+id/password"
+        android:layout_centerVertical="true"
+        android:src="@drawable/view"
+        app:tint="#9F8F8F"
+        />
+
+
+  </RelativeLayout>
+
 
   <TextView
       android:id="@+id/tv5"
@@ -97,7 +119,7 @@
       android:layout_height="wrap_content"
       android:layout_marginTop="5dp"
       android:paddingLeft="20dp"
-      android:layout_below="@+id/password"
+      android:layout_below="@+id/passwordet"
       android:text="Mininum 8 characters."
       android:textColor="#9F8F8F"
       android:textStyle="bold"

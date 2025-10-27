@@ -19,9 +19,10 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
+// import com.google.firebase.firestore.FieldValue; // For serverTimestamp, if chosen
 
 import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.util.Date; // Make sure this is java.util.Date
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -35,16 +36,15 @@ public class textnoteedit extends AppCompatActivity {
     boolean isPinned, isLocked;
 
     RichEditor editor;
-    String documentID, note_title, uid;
-    String intl_title, hashedPin, folder_id;
+    String documentID, receivedTitle, uid;
+    String receivedHashedPin, receivedFolderId;
     String originalContent;
     FirebaseFirestore db;
     ImageView exitButton, checkButton;
     DocumentReference noteRef;
     FirebaseAuth auth;
     FirebaseUser user;
-    String currentTime, deleted_date;
-    boolean originalIsDeleted;
+    String currentTime;
     private ImageView boldButton, italicButton, underlineButton, imageButton, undoButton, redoButton;
 
     @Override
@@ -113,19 +113,25 @@ public class textnoteedit extends AppCompatActivity {
         }
 
         documentID = getIntent().getStringExtra("key");
-        intl_title = getIntent().getStringExtra("key1");
         originalContent = getIntent().getStringExtra("key2");
-        isPinned = getIntent().getExtras().getBoolean("key3");
-        isLocked = getIntent().getExtras().getBoolean("key4");
-        hashedPin = getIntent().getStringExtra("key5");
-        folder_id = getIntent().getStringExtra("key6");
-        originalIsDeleted = getIntent().getExtras().getBoolean("key7", false);
-        deleted_date = getIntent().getStringExtra("key8");
 
+        receivedTitle = getIntent().getStringExtra("note_title");
+        isPinned = getIntent().getBooleanExtra("isPinned", false);
+        isLocked = getIntent().getBooleanExtra("isLocked", false);
+        receivedHashedPin = getIntent().getStringExtra("hashedPin");
+        receivedFolderId = getIntent().getStringExtra("folder_id");
+
+        if (documentID == null || documentID.isEmpty()) {
+            Toast.makeText(this, "Error: Note ID missing.", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
         noteRef = db.collection("users").document(uid).collection("notes").document(documentID);
 
-        titleEditText.setText(intl_title);
-        editor.setHtml(originalContent);
+        titleEditText.setText(receivedTitle);
+        if (originalContent != null) {
+            editor.setHtml(originalContent);
+        }
 
 
         checkButton.setOnClickListener(new View.OnClickListener() {
@@ -143,8 +149,6 @@ public class textnoteedit extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 updateNote();
-                Intent intent = new Intent(getApplicationContext(), mainpage.class);
-                startActivity(intent);
                 finish();
             }
         });
@@ -154,34 +158,42 @@ public class textnoteedit extends AppCompatActivity {
     private void updateNote() {
         String newNoteText = editor.getHtml();
         String newNoteTitle = titleEditText.getText().toString().trim();
-        currentTime = new SimpleDateFormat("dd-MM-yyyy HH:mm", Locale.getDefault()).format(new Date()).toString();
+        currentTime = new SimpleDateFormat("dd-MM-yyyy HH:mm", Locale.getDefault()).format(new Date()); // String date
 
-        if (newNoteTitle.isEmpty() && newNoteText.isEmpty()) {
+        if (newNoteTitle.isEmpty() && (newNoteText == null || newNoteText.isEmpty())) {
             Toast.makeText(this, "Note cannot be empty. Discarding changes.", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
 
-
         Map<String, Object> noteUpdates = new HashMap<>();
-        noteUpdates.put("note_content", newNoteText);
-        noteUpdates.put("note_date", currentTime);
         noteUpdates.put("note_title", newNoteTitle);
+        noteUpdates.put("note_content", newNoteText);
+        noteUpdates.put("note_date", currentTime); // Your string representation of the date
         noteUpdates.put("note_id", documentID);
+
         noteUpdates.put("isPinned", isPinned);
         noteUpdates.put("isLocked", isLocked);
-        noteUpdates.put("hashedPin", hashedPin);
-        noteUpdates.put("folder_id", folder_id);
-        noteUpdates.put("isDeleted", originalIsDeleted);
-        noteUpdates.put("deleted_date", deleted_date);
-        noteUpdates.put("type", "note");
+        noteUpdates.put("hashedPin", receivedHashedPin);
+        noteUpdates.put("folder_id", receivedFolderId);
 
+        noteUpdates.put("type", "text");
 
-        noteRef.set(noteUpdates)
+        // ***** ADD/UPDATE TIMESTAMP *****
+        // Use java.util.Date; Firestore will convert it to its own Timestamp type.
+        // This is crucial for sorting in mainpage.java
+        noteUpdates.put("timestamp", new Date());
+
+        // ***** ENSURE isDELETED is FALSE for active notes *****
+        // This is crucial for filtering in mainpage.java
+        noteUpdates.put("isDeleted", false);
+
+        noteRef.set(noteUpdates) // .set() replaces the entire document.
                 .addOnSuccessListener(new OnSuccessListener<Void>() {
                     @Override
                     public void onSuccess(Void aVoid) {
                         Toast.makeText(textnoteedit.this, "Note updated!", Toast.LENGTH_SHORT).show();
+                        // You might want to finish() here too after checkmark save
                     }
                 })
                 .addOnFailureListener(new OnFailureListener() {

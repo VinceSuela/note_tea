@@ -21,9 +21,6 @@
             android:name=".secondarypage"
             android:exported="false" />
         <activity
-            android:name=".doodlepage"
-            android:exported="false" />
-        <activity
             android:name=".binpage"
             android:exported="false" />
         <activity
